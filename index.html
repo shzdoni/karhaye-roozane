@@ -154,6 +154,53 @@
   }
   .footer-btn:hover { border-color: var(--primary); color: var(--primary); }
 
+  .chip-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  .chip { border: 1px solid var(--border); background: #fff; color: var(--muted); border-radius: 999px; padding: 6px 12px; font-size: .85rem; font-family: inherit; cursor: pointer; transition: all .2s; }
+  .chip.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+  #dueDateInput { display: none; margin-top: 8px; width: 100%; border: 2px solid var(--border); border-radius: 10px; padding: 8px 10px; font-family: inherit; font-size: .9rem; direction: ltr; text-align: center; }
+  .overdue-badge { font-size: .75rem; color: #b91c1c; background: #fee2e2; border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
+
+  .add-form textarea { flex: 1; border: 2px solid var(--border); border-radius: 10px; padding: 8px 10px; font-size: .95rem; font-family: inherit; resize: vertical; outline: none; min-width: 0; }
+  .add-form textarea:focus { border-color: var(--primary); }
+  .brain-row { display: flex; align-items: center; gap: 6px; padding: 8px 4px; border-bottom: 1px solid var(--border); }
+  .brain-row:last-child { border-bottom: none; }
+  .brain-text { flex: 1; word-break: break-word; font-size: .95rem; }
+  #noteInput { width: 100%; border: 2px solid var(--border); border-radius: 10px; padding: 10px; font-family: inherit; font-size: .95rem; resize: vertical; outline: none; box-sizing: border-box; background: #f9fafb; }
+  #noteInput:focus { border-color: var(--primary); background: #fff; }
+
+  #focusStrip { display: flex; align-items: center; gap: 10px; background: linear-gradient(90deg, var(--primary), #7c3aed); color: #fff; border-radius: 12px; padding: 12px; font-weight: bold; }
+  #focusStrip .fs-text { flex: 1; word-break: break-word; }
+  #focusStrip .fs-btn { background: rgba(255,255,255,.2); border: none; color: #fff; border-radius: 10px; padding: 8px 14px; cursor: pointer; font-family: inherit; white-space: nowrap; }
+  #focusStrip .fs-btn:hover { background: rgba(255,255,255,.3); }
+
+  .task-star { background: none; border: none; cursor: pointer; font-size: 1rem; padding: 4px 6px; border-radius: 8px; transition: background .2s; }
+  .task-star:hover { background: #fef9c3; }
+
+  .bday-row { display: flex; align-items: center; gap: 8px; padding: 10px 4px; border-bottom: 1px solid var(--border); }
+  .bday-row:last-child { border-bottom: none; }
+  .bday-row.today-row { background: #fdf2f8; border-radius: 10px; }
+  .bday-name { flex: 1; font-weight: 600; }
+  .bday-when { font-size: .82rem; white-space: nowrap; }
+  .bday-soon { color: #9d174d; font-weight: bold; }
+  #bdayBanner { background: linear-gradient(90deg, #fdf2f8, #fef9c3); border: 2px solid #fbcfe8; color: #9d174d; border-radius: 14px; padding: 12px 14px; margin-bottom: 14px; text-align: center; font-weight: bold; }
+  #bdayForm .brow { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+  #bdayForm input, #bdayForm select { border: 2px solid var(--border); border-radius: 10px; padding: 8px 10px; font-family: inherit; font-size: .9rem; outline: none; box-sizing: border-box; }
+  #bdayForm input:focus, #bdayForm select:focus { border-color: var(--primary); }
+  #bdayName { flex: 1; min-width: 120px; }
+  #bdayY { width: 74px; }
+  #bdayM { width: 48px; }
+  #bdayD { width: 48px; }
+  #bdaySubmit { background: var(--primary); color: #fff; border: none; border-radius: 10px; padding: 8px 14px; cursor: pointer; font-family: inherit; }
+
+  #lockScreen { position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: rgba(79,70,229,.97); z-index: 9999; display: none; align-items: center; justify-content: center; padding: 16px; }
+  .lock-box { background: #fff; border-radius: 18px; padding: 24px; max-width: 340px; width: 100%; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,.35); box-sizing: border-box; }
+  .lock-emoji { font-size: 2.4rem; margin-bottom: 6px; }
+  #lockTitle { font-weight: bold; margin-bottom: 12px; color: var(--text); font-size: .95rem; }
+  #lockPin, #lockPin2 { width: 100%; border: 2px solid var(--border); border-radius: 10px; padding: 10px; font-size: 1.1rem; text-align: center; letter-spacing: 4px; direction: ltr; margin-bottom: 8px; outline: none; font-family: inherit; box-sizing: border-box; }
+  #lockPin:focus, #lockPin2:focus { border-color: var(--primary); }
+  #lockSubmit { background: var(--primary); color: #fff; border: none; border-radius: 10px; padding: 10px 18px; cursor: pointer; font-family: inherit; font-size: 1rem; width: 100%; }
+  #lockError { color: var(--danger); font-size: .85rem; margin-top: 8px; min-height: 1.2em; }
+
   .toast {
     position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
     background: var(--text); color: #fff;
@@ -172,7 +219,18 @@
 </style>
 </head>
 <body>
+<div id="lockScreen">
+  <form class="lock-box" id="lockForm">
+    <div class="lock-emoji">🔒</div>
+    <div id="lockTitle">برای دیدن برنامه رمز رو وارد کن</div>
+    <input type="password" id="lockPin" inputmode="numeric" maxlength="12" autocomplete="off" placeholder="••••">
+    <input type="password" id="lockPin2" inputmode="numeric" maxlength="12" autocomplete="off" placeholder="تکرار رمز" style="display:none">
+    <button type="submit" id="lockSubmit">باز کن</button>
+    <div id="lockError"></div>
+  </form>
+</div>
 <div class="app">
+  <div id="bdayBanner" style="display:none"></div>
   <header>
     <h1>✅ کارهای روزانه من</h1>
     <div class="date" id="dateText"></div>
@@ -183,6 +241,23 @@
       <input type="text" id="taskInput" placeholder="مثلاً: ۳۰ دقیقه ورزش کنم…" maxlength="80" autocomplete="off">
       <button type="submit">➕ اضافه کن</button>
     </form>
+    <div class="chip-row" aria-label="برای چه روزی؟">
+      <button type="button" class="chip active" data-mode="today">امروز</button>
+      <button type="button" class="chip" data-mode="d1">فردا</button>
+      <button type="button" class="chip" data-mode="d3">۳ روز دیگه</button>
+      <button type="button" class="chip" data-mode="d7">۷ روز دیگه</button>
+      <button type="button" class="chip" data-mode="custom" title="انتخاب تاریخ دلخواه">📅 دلخواه: <span id="customChipLabel">—</span></button>
+    </div>
+    <input type="date" id="dueDateInput" aria-label="انتخاب تاریخ">
+  </div>
+
+  <div class="card">
+    <h2 class="section-title">🧠 هرچی تو ذهنت درگیرته، همین‌جا رهاش کن</h2>
+    <form class="add-form" id="brainForm">
+      <textarea id="brainInput" rows="1" placeholder="هر فکری داری بنویس… بعداً با یک تپش تبدیلش می‌کنیم به کار" maxlength="200"></textarea>
+      <button type="submit">💾 ثبت</button>
+    </form>
+    <div id="brainList" style="margin-top:8px"></div>
   </div>
 
   <div class="card">
@@ -195,7 +270,39 @@
 
     <div style="margin-top:10px">
       <div id="taskList"></div>
+      <div id="futureWrap" style="display:none">
+        <h2 class="section-title" style="margin-top:14px">📅 کارهای آینده</h2>
+        <div id="futureList"></div>
+      </div>
     </div>
+  </div>
+
+  <div class="card">
+    <h2 class="section-title">🎯 حالت تمرکز</h2>
+    <div id="focusStrip"></div>
+  </div>
+
+  <div class="card">
+    <h2 class="section-title">🎂 تولدها و یادآور</h2>
+    <form id="bdayForm">
+      <div class="brow">
+        <input type="text" id="bdayName" placeholder="نام شخص" maxlength="40" autocomplete="off">
+        <select id="bdayCal" aria-label="تقویم">
+          <option value="jal">شمسی</option>
+          <option value="greg">میلادی</option>
+        </select>
+      </div>
+      <div class="brow">
+        <input type="number" id="bdayY" placeholder="سال" min="1000" max="2200">
+        <input type="number" id="bdayM" placeholder="ماه" min="1" max="12">
+        <input type="number" id="bdayD" placeholder="روز" min="1" max="31">
+        <button type="submit" id="bdaySubmit">➕ ثبت</button>
+      </div>
+    </form>
+    <div style="margin-top:10px">
+      <div id="bdayList"></div>
+    </div>
+    <button type="button" class="footer-btn" id="notifyBtn" style="margin-top:10px">🔔 یادآور مرورگر</button>
   </div>
 
   <div class="card">
@@ -205,10 +312,17 @@
     <div id="weekBars"></div>
   </div>
 
+  <div class="card">
+    <h2 class="section-title">📝 یادداشت امروز</h2>
+    <textarea id="noteInput" rows="3" maxlength="2000" placeholder="هرچی دوست داری بنویس… خودش ذخیره می‌شه"></textarea>
+  </div>
+
   <div class="footer-row">
     <button class="footer-btn" id="exportBtn">⬇️ ذخیره پشتیبان</button>
     <button class="footer-btn" id="importBtn">⬆️ بازیابی پشتیبان</button>
     <button class="footer-btn" id="clearDayBtn">🔄 پاک کردن تیک‌های امروز</button>
+    <button class="footer-btn" id="lockBtn">🔒 قفل با رمز</button>
+    <button class="footer-btn" id="removeLockBtn" style="display:none">🔓 برداشتن رمز</button>
     <input type="file" id="importFile" accept=".json" hidden>
   </div>
 </div>
@@ -247,13 +361,80 @@ function weekdayNameFromKey(key) {
   } catch (e) { return ""; }
 }
 
-// تاریخ امروز به فارسی (تقویم شمسی با پشتیبانی مرورگر؛ در صورت خطا تاریخ میلادی)
+// تاریخ امروز به فارسی با ترتیب درست: «دوشنبه ۱۱ آبان ۱۴۰۵»
 function todayPersian() {
   try {
-    return new Date().toLocaleDateString("fa-IR", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+    return faDate(todayKey());
   } catch (e) {
     return todayKey();
   }
+}
+
+// اختلاف دو کلید تاریخ به «روز» (a - b)
+function diffDays(a, b) {
+  var p1 = a.split("-"), p2 = b.split("-");
+  var d1 = new Date(+p1[0], +p1[1] - 1, +p1[2], 12, 0, 0).getTime();
+  var d2 = new Date(+p2[0], +p2[1] - 1, +p2[2], 12, 0, 0).getTime();
+  return Math.round((d1 - d2) / 86400000);
+}
+
+// کلیدِ N روز بعد از امروز (تقویم محلی)
+function keyFromTodayPlus(n) {
+  var d = new Date();
+  d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+  return dateKey(d);
+}
+
+// بخش‌های عددی تاریخ در تقویم دلخواه (با کش) — برای مقایسه‌ی روز/ماه تولد
+var partCache = {};
+var fmtJalLatn = null, fmtGregLatn = null;
+function partsFor(key, cal) {
+  var ck = key + "|" + cal;
+  if (partCache[ck]) return partCache[ck];
+  var p = key.split("-");
+  var d = new Date(+p[0], +p[1] - 1, +p[2]);
+  var out = {};
+  var pr;
+  if (cal === "greg") {
+    if (!fmtGregLatn) fmtGregLatn = new Intl.DateTimeFormat("en-GB-u-nu-latn", { weekday: "long", day: "numeric", month: "numeric", year: "numeric" });
+    pr = fmtGregLatn.formatToParts(d);
+  } else {
+    if (!fmtJalLatn) fmtJalLatn = new Intl.DateTimeFormat("fa-IR-u-ca-persian-nu-latn", { weekday: "long", day: "numeric", month: "numeric", year: "numeric" });
+    pr = fmtJalLatn.formatToParts(d);
+  }
+  for (var i = 0; i < pr.length; i++) out[pr[i].type] = pr[i].value;
+  out.dayN = parseInt(out.day, 10);
+  out.monthN = parseInt(out.month, 10);
+  out.yearN = parseInt(out.year, 10);
+  partCache[ck] = out;
+  return out;
+}
+
+// برچسب فارسی یک کلید تاریخ: «پنجشنبه ۱۴ آبان ۱۴۰۵»
+function faDate(key) {
+  try {
+    var p = key.split("-");
+    var d = new Date(+p[0], +p[1] - 1, +p[2]);
+    var pr = new Intl.DateTimeFormat("fa-IR-u-ca-persian", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).formatToParts(d);
+    var m = {};
+    for (var i = 0; i < pr.length; i++) m[pr[i].type] = pr[i].value;
+    if (m.day && m.month) {
+      return (m.weekday ? m.weekday + " " : "") + m.day + " " + m.month + (m.year ? " " + m.year : "");
+    }
+    return key;
+  } catch (e) {
+    return key;
+  }
+}
+
+// برچسب نسبی: امروز / فردا / ۳ روز دیگه ...
+function relLabel(key) {
+  var n = diffDays(key, todayKey());
+  if (n === 0) return "امروز";
+  if (n === 1) return "فردا";
+  if (n === -1) return "دیروز";
+  if (n < 0) return toFa(-n) + " روز پیش";
+  return toFa(n) + " روز دیگه";
 }
 
 // تبدیل به اعداد فارسی برای نمایش
@@ -277,17 +458,25 @@ function showToast(msg) {
 
 var fallbackStore = null; // اگر localStorage نبود یا خطا داد، حافظه‌ی موقت
 
-function storageGet() {
+function storageGetRaw() {
   try {
-    var raw = window.localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
+    return window.localStorage.getItem(STORAGE_KEY);
   } catch (e) {
-    return fallbackStore ? JSON.parse(fallbackStore) : null;
+    return fallbackStore;
   }
 }
 
-function storageSave(state) {
-  var raw = JSON.stringify(state);
+function storageGet() {
+  var raw = storageGetRaw();
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch (e) {
+    return null;
+  }
+}
+
+function storageSet(raw) {
   try {
     window.localStorage.setItem(STORAGE_KEY, raw);
   } catch (e) {
@@ -295,40 +484,38 @@ function storageSave(state) {
   }
 }
 
+var saveChain = Promise.resolve();
+
+function storageSave(stateObj) {
+  if (lockState.locked) return; // هرگز حین قفل ذخیره نکن
+  var raw = JSON.stringify(stateObj);
+  if (!lockState.key) {
+    storageSet(raw);
+    return;
+  }
+  // قفل فعال: رمزنگاری نامتقارنِ ناهمزمان با AES-GCM
+  saveChain = saveChain.then(function () {
+    return encryptText(lockState.key, lockState.salt, raw);
+  }).then(storageSet).catch(function () {
+    fallbackStore = raw;
+    showToast("خطا در ذخیره‌سازی رمزنگاری‌شده ❌");
+  });
+}
+
 /* ==================# وضعیت برنامه #================== */
 
-// state = { tasks: [{id, title, createdAt}], history: { "yyyy-mm-dd": { taskId: true } } }
-var state = loadState();
+// state = { tasks: [{id, title, createdAt, due?, star?}], history: {...}, birthdays: [...], brain: [...], notes: {...} }
+// تشخیص اینکه حافظه «رمزنگاری‌شده» است (برای نمایش صفحه قفلقبل از هر چیز)
+var bootEncrypted = false;
+(function () {
+  var raw = null;
+  try { raw = window.localStorage.getItem(STORAGE_KEY); } catch (e) {}
+  if (typeof raw === "string" && raw.indexOf("ENC1:") === 0) bootEncrypted = true;
+})();
+var state = bootEncrypted ? { tasks: [], history: {}, birthdays: [], brain: [], notes: {} } : loadState();
 
 function loadState() {
-  var s = storageGet();
-  var clean = { tasks: [], history: {} };
-  if (s && typeof s === "object") {
-    if (Array.isArray(s.tasks)) {
-      for (var i = 0; i < s.tasks.length; i++) {
-        var t = s.tasks[i];
-        if (t && typeof t.id === "number" && typeof t.title === "string" && t.title.trim() && typeof t.createdAt === "number") {
-          clean.tasks.push({ id: t.id, title: t.title.trim(), createdAt: t.createdAt });
-        }
-      }
-    }
-    if (s.history && typeof s.history === "object") {
-      var keys = Object.keys(s.history);
-      for (var k = 0; k < keys.length; k++) {
-        var day = s.history[keys[k]];
-        if (day && typeof day === "object") {
-          var dayClean = {};
-          var ids = Object.keys(day);
-          for (var j = 0; j < ids.length; j++) {
-            var id = +ids[j];
-            if (day[ids[j]] === true && !isNaN(id)) dayClean[id] = true;
-          }
-          clean.history[keys[k]] = dayClean;
-        }
-      }
-    }
-  }
-  return clean;
+  return sanitize(storageGet() || {});
 }
 
 function saveState() { storageSave(state); }
@@ -339,15 +526,17 @@ function doneMapFor(key) {
 
 /* ==================# منطق #================== */
 
-function addTask(title) {
-  var t = title.trim();
+function addTask(title, due) {
+  var t = (title || "").trim();
   if (!t) return { ok: false, msg: "عنوان کار خالیه! یه چیزی بنویس." };
   if (t.length > 80) return { ok: false, msg: "عنوان خیلی طولانیه (حداکثر ۸۰ حرف)." };
+  if (due && !/^\d{4}-\d{2}-\d{2}$/.test(due)) return { ok: false, msg: "تاریخ انتخابی معتبر نیست." };
 
-  // جلوگیری از کار تکراری (مقایسه بدون فاصله‌های اضافه)
+  // جلوگیری از کار تکراری (همان عنوان + همان تاریخ)
   var norm = t.replace(/\s+/g, " ");
   for (var i = 0; i < state.tasks.length; i++) {
-    if (state.tasks[i].title.replace(/\s+/g, " ") === norm) {
+    var sameDue = (state.tasks[i].due || null) === (due || null);
+    if (state.tasks[i].title.replace(/\s+/g, " ") === norm && sameDue) {
       return { ok: false, msg: "این کار از قبل تو لیسته 🙂" };
     }
   }
@@ -355,10 +544,13 @@ function addTask(title) {
   var id = Date.now();
   if (state.tasks.some(function (x) { return x.id === id; })) id += 1;
 
-  state.tasks.push({ id: id, title: t, createdAt: id });
+  var task = { id: id, title: t, createdAt: id };
+  if (due) task.due = due;
+  state.tasks.push(task);
   saveState();
+  markDirty();
   renderAll();
-  return { ok: true, msg: "اضافه شد ✅" };
+  return { ok: true, msg: due ? ("برای " + relLabel(due) + " (" + faDate(due) + ") ثبت شد 📅") : "اضافه شد ✅" };
 }
 
 function toggleDone(id) {
@@ -370,6 +562,7 @@ function toggleDone(id) {
   // نقشه‌ی خالی رو نگه نمی‌داریم تا فایل تمیز بمونه
   if (Object.keys(map).length === 0) delete state.history[today];
   saveState();
+  markDirty();
   renderAll();
 }
 
@@ -391,6 +584,7 @@ function removeTask(id) {
   // حذف از تاریخچه‌ی همه‌ی روزها تا درصد روزهای قدیمی نیز منطقی بماند؟
   // تصمیم: تاریخچه‌ی قدیمی را نگه می‌داریم (فقط تیک امروز حذف می‌شود) تا آمار گذشته واقعی بماند.
   saveState();
+  markDirty();
   renderAll();
   showToast("پاک شد 🗑️");
 }
@@ -399,21 +593,60 @@ function clearToday() {
   if (window.confirm("همه‌ی تیک‌های امروز برداشته بشه؟")) {
     delete state.history[todayKey()];
     saveState();
+    markDirty();
     renderAll();
     showToast("تیک‌های امروز پاک شد 🔄");
   }
 }
 
-// کسانی که در روزِ key «وجود داشته‌اند» = کارهایی که createdAt آن‌ها قبل از پایانٔ آن روز است
-function tasksExistingOn(key, taskList) {
-  var p = key.split("-");
-  var endOfDay = new Date(+p[0], +p[1] - 1, +p[2], 23, 59, 59).getTime();
-  var list = taskList || state.tasks;
-  return list.filter(function (t) { return t.createdAt <= endOfDay; });
+// ===== روابط تاریخ/کار =====
+// کارهای «روزانه» (بدون due) هر روز بعد از ساختن‌شدن حضور دارند.
+// کارهای «یک‌بازی» (با due = تاریخ مشخص) از روزِ due به بعد حاضرند تا وقتی تیک بخورند (حتی معوق می‌مانند).
+
+var fdCache = null; // first-done-day per task id
+function markDirty() { fdCache = null; }
+
+function firstDoneDay(id) {
+  if (!fdCache) {
+    fdCache = {};
+    var keys = Object.keys(state.history).sort();
+    for (var k = 0; k < keys.length; k++) {
+      var ids = state.history[keys[k]];
+      for (var idStr in ids) {
+        if (ids[idStr] === true && typeof fdCache[idStr] === "undefined") fdCache[idStr] = keys[k];
+      }
+    }
+  }
+  var v = fdCache[id];
+  return typeof v === "undefined" ? null : v;
 }
 
-function dayStats(key, taskList) {
-  var existing = tasksExistingOn(key, taskList);
+// آیا کار یک‌بازی در روز key حاضر است؟
+function oneOffPresent(task, key) {
+  var fd = firstDoneDay(task.id);
+  if (fd !== null && fd < key) return false;      // قبلاً (قبل از این روز) تمام شده
+  if (fd === key) return key >= task.due;          // همین امروز تمام شده: فقط اگر در روزِ سررسید/بعدِ آن
+  return key >= task.due;                          // هنوز انجام نشده: از روز سررسید به بعد حاضر است
+}
+
+// کارهای حاضر در یک روز معین با ترتیب منطقی
+function tasksPresentOn(key) {
+  var p = key.split("-");
+  var endMs = new Date(+p[0], +p[1] - 1, +p[2], 23, 59, 59).getTime();
+  var list = [];
+  for (var i = 0; i < state.tasks.length; i++) {
+    var t = state.tasks[i];
+    if (t.due) {
+      if (oneOffPresent(t, key)) list.push(t);
+    } else if (t.createdAt <= endMs) {
+      list.push(t);
+    }
+  }
+  return list;
+}
+
+function dayStats(key) {
+  var existing = tasksPresentOn(key);
   var total = existing.length;
   var done = 0;
   if (total > 0) {
@@ -476,12 +709,20 @@ function weekAverage() {
 
 function renderAll() {
   renderHeader();
+  renderBdayBanner();
   renderTasks();
+  renderFuture();
+  renderFocus();
+  renderBrain();
   renderStats();
+  renderNote();
+  renderBirthdays();
 }
 
-function renderHeader() {
-  $("dateText").textContent = todayPersian();
+// اولویت چیدمان در لیست امروز: روزانه (۰) → سررسیدِ امروز (۱) → دیرکرد (۲)؛ ستاره‌دارتر
+function rowRank(t, today) {
+  if (t.due) return diffDays(t.due, today) < 0 ? 2 : 1;
+  return 0;
 }
 
 function renderTasks() {
@@ -491,18 +732,25 @@ function renderTasks() {
   var today = todayKey();
   var map = doneMapFor(today);
 
-  if (state.tasks.length === 0) {
+  var rows = tasksPresentOn(today);
+  rows.sort(function (a, b) {
+    // ستاره‌دارها بالای لیست، بعد اولویت روز، بعد ترتیب ساخته‌شدن
+    if (a.star !== b.star) return (b.star ? 1 : 0) - (a.star ? 1 : 0);
+    var ra = rowRank(a, today), rb = rowRank(b, today);
+    if (ra !== rb) return ra - rb;
+    if (a.createdAt !== b.createdAt) return a.createdAt - b.createdAt;
+    return a.title.localeCompare(b.title, "fa");
+  });
+
+  if (rows.length === 0) {
     var empty = document.createElement("div");
     empty.className = "empty-msg";
-    empty.textContent = "هنوز کاری اضافه نکردی. از فرم بالا شروع کن! 🌱";
+    empty.textContent = state.tasks.length === 0 ? "هنوز کاری اضافه نکردی. از فرم بالا شروع کن! 🌱" : "امروز کاری نداری، استراحت کن 😴";
     list.appendChild(empty);
   } else {
-    var sorted = state.tasks.slice().sort(function (a, b) {
-      if (a.createdAt !== b.createdAt) return a.createdAt - b.createdAt;
-      return a.title.localeCompare(b.title, "fa");
-    });
-    for (var i = 0; i < sorted.length; i++) {
-      list.appendChild(buildTaskRow(sorted[i], !!map[sorted[i].id]));
+    for (var i = 0; i < rows.length; i++) {
+      var t = rows[i];
+      list.appendChild(buildTaskRow(t, !!map[t.id], { overdue: !!(t.due && diffDays(t.due, today) < 0) }));
     }
   }
 
@@ -529,7 +777,72 @@ function renderTasks() {
   }
 }
 
-function buildTaskRow(task, done) {
+// بخش «کارهای آینده»: کارهای یک‌بازی که روز سررسیدشان هنوز نرسیده
+function renderFuture() {
+  var wrap = $("futureWrap");
+  var list = $("futureList");
+  list.textContent = "";
+
+  var today = todayKey();
+  var future = [];
+  for (var i = 0; i < state.tasks.length; i++) {
+    var t = state.tasks[i];
+    if (t.due && diffDays(t.due, today) > 0 && firstDoneDay(t.id) === null) future.push(t);
+  }
+  future.sort(function (a, b) {
+    var r = a.due - b.due ? (a.due < b.due ? -1 : 1) : 0;
+    if (r !== 0) return r;
+    return a.createdAt - b.createdAt;
+  });
+
+  if (future.length === 0) {
+    wrap.style.display = "none";
+    return;
+  }
+  wrap.style.display = "block";
+  for (var j = 0; j < future.length; j++) list.appendChild(buildFutureRow(future[j]));
+}
+
+function buildFutureRow(task) {
+  var row = document.createElement("div");
+  row.className = "future-row";
+
+  var cb = document.createElement("input");
+  cb.type = "checkbox";
+  cb.className = "task-check";
+  cb.checked = false;
+  cb.setAttribute("aria-label", task.title);
+  cb.title = "اگر همین الان انجامش دادی تیک بزن";
+  cb.addEventListener("change", function () { toggleDone(task.id); });
+
+  var title = document.createElement("span");
+  title.className = "future-title";
+  title.textContent = task.title;
+
+  var when = document.createElement("span");
+  when.className = "future-date";
+  when.textContent = relLabel(task.due) + " • " + faDate(task.due);
+
+  var del = document.createElement("button");
+  del.className = "task-delete";
+  del.type = "button";
+  del.title = "حذف کار";
+  del.setAttribute("aria-label", "حذف کار: " + task.title);
+  del.textContent = "🗑️";
+  del.addEventListener("click", function () { removeTask(task.id); });
+
+  row.appendChild(cb);
+  row.appendChild(title);
+  row.appendChild(when);
+  row.appendChild(del);
+  return row;
+}
+
+function renderHeader() {
+  $("dateText").textContent = todayPersian();
+}
+
+function buildTaskRow(task, done, opts) {
   var row = document.createElement("div");
   row.className = "task-item" + (done ? " done" : "");
 
@@ -544,6 +857,13 @@ function buildTaskRow(task, done) {
   title.className = "task-title";
   title.textContent = task.title; // امن: بدون innerHTML
 
+  if (opts && opts.overdue) {
+    var ob = document.createElement("span");
+    ob.className = "overdue-badge";
+    ob.textContent = "⏰ دیر کرد";
+    row.appendChild(ob);
+  }
+
   var badge = document.createElement("span");
   badge.className = "task-done-badge";
   badge.textContent = "✔ انجام شد";
@@ -556,11 +876,179 @@ function buildTaskRow(task, done) {
   del.textContent = "🗑️";
   del.addEventListener("click", function () { removeTask(task.id); });
 
+  var star = document.createElement("button");
+  star.className = "task-star";
+  star.type = "button";
+  star.title = task.star ? "برداشتن ستاره" : "پرتکرار مهم";
+  star.setAttribute("aria-label", "ستاره‌دار کردن: " + task.title);
+  star.textContent = task.star ? "⭐" : "☆";
+  star.addEventListener("click", function () { toggleStar(task.id); });
+
   row.appendChild(cb);
   row.appendChild(title);
   row.appendChild(badge);
+  row.appendChild(star);
   row.appendChild(del);
   return row;
+}
+
+function toggleStar(id) {
+  for (var i = 0; i < state.tasks.length; i++) {
+    if (state.tasks[i].id === id) { state.tasks[i].star = !state.tasks[i].star; break; }
+  }
+  saveState();
+  markDirty();
+  renderAll();
+}
+
+/* ===== 🎯 حالت تمرکز ===== */
+function renderFocus() {
+  var el = $("focusStrip");
+  el.textContent = "";
+  var today = todayKey();
+  var present = tasksPresentOn(today);
+  var pick = null;
+  for (var i = 0; i < present.length; i++) {
+    if (!doneMapFor(today)[present[i].id]) {
+      if (!pick || (present[i].star && !pick.star)) pick = present[i];
+    }
+  }
+  if (!pick) { el.style.display = "none"; return; }
+  el.style.display = "flex";
+
+  var label = document.createElement("span");
+  label.textContent = "🎯 الان فقط این:";
+
+  var text = document.createElement("span");
+  text.className = "fs-text";
+  text.textContent = pick.title;
+
+  var btn = document.createElement("button");
+  btn.className = "fs-btn";
+  btn.type = "button";
+  btn.textContent = "✅ انجامش دادم";
+  btn.addEventListener("click", function () { toggleDone(pick.id); });
+
+  el.appendChild(label);
+  el.appendChild(text);
+  el.appendChild(btn);
+}
+
+/* ===== 🧠 ذهن‌خالی ===== */
+function renderBrain() {
+  var list = $("brainList");
+  list.textContent = "";
+  if (!state.brain || state.brain.length === 0) {
+    var e = document.createElement("div");
+    e.className = "empty-msg";
+    e.textContent = "ذهنت سبک شد! چیزی باقی نمونده 😌";
+    list.appendChild(e);
+    return;
+  }
+  var sorted = state.brain.slice().sort(function (a, b) { return a.createdAt - b.createdAt; });
+  for (var i = 0; i < sorted.length; i++) {
+    list.appendChild(buildBrainRow(sorted[i]));
+  }
+}
+
+function buildBrainRow(item) {
+  var row = document.createElement("div");
+  row.className = "brain-row";
+
+  var text = document.createElement("span");
+  text.className = "brain-text";
+  text.textContent = item.text;
+
+  var toToday = document.createElement("button");
+  toToday.className = "footer-btn";
+  toToday.type = "button";
+  toToday.title = "تبدیل به کارِ امروز";
+  toToday.textContent = "→ امروز";
+  toToday.addEventListener("click", function () { brainToTask(item.id, null); });
+
+  var toFuture = document.createElement("button");
+  toFuture.className = "footer-btn";
+  toFuture.type = "button";
+  toFuture.title = "تبدیل به کارِ فردا";
+  toFuture.textContent = "→ فردا";
+  toFuture.addEventListener("click", function () { brainToTask(item.id, chipSelection.due || keyFromTodayPlus(1)); });
+
+  var del = document.createElement("button");
+  del.className = "task-delete";
+  del.type = "button";
+  del.title = "پاک کردن";
+  del.setAttribute("aria-label", "پاک کردن فکر: " + item.text);
+  del.textContent = "🗑️";
+  del.addEventListener("click", function () { deleteBrain(item.id); });
+
+  row.appendChild(text);
+  row.appendChild(toToday);
+  row.appendChild(toFuture);
+  row.appendChild(del);
+  return row;
+}
+
+function brainToTask(id, due) {
+  var item = null;
+  for (var i = 0; i < state.brain.length; i++) {
+    if (state.brain[i].id === id) item = state.brain[i];
+  }
+  if (!item) return;
+  var res = addTask(item.text, due);
+  if (!res.ok) { showToast(res.msg); return; }
+  state.brain = state.brain.filter(function (x) { return x.id !== id; });
+  saveState();
+  markDirty();
+  renderAll();
+  showToast(due ? "برای " + relLabel(due) + " ثبت شد 📅" : "به کارهای امروز اضافه شد ✅");
+}
+
+function deleteBrain(id) {
+  var item = null;
+  for (var i = 0; i < state.brain.length; i++) {
+    if (state.brain[i].id === id) item = state.brain[i];
+  }
+  if (!item) return;
+  if (!window.confirm("این فکر پاک بشه؟ «" + item.text + "»")) return;
+  state.brain = state.brain.filter(function (x) { return x.id !== id; });
+  saveState();
+  markDirty();
+  renderAll();
+}
+
+function addBrain(text) {
+  var t = (text || "").trim();
+  if (!t) return { ok: false, msg: "یه چیزی بنویس 🙂" };
+  if (t.length > 200) return { ok: false, msg: "خیلی بلنده (حداکثر ۲۰۰ حرف)!" };
+  var id = Date.now();
+  while (state.brain.some(function (x) { return x.id === id; })) id += 1;
+  state.brain.push({ id: id, text: t, createdAt: id });
+  saveState();
+  renderAll();
+  return { ok: true, msg: "ثبت شد! ذهنت سبک‌تر شد 🧠" };
+}
+
+/* ===== 📝 یادداشت روزانه ===== */
+var noteTimer = null;
+function renderNote() {
+  var el = $("noteInput");
+  var val = (state.notes && state.notes[todayKey()]) || "";
+  if (el.value !== val) el.value = val;
+}
+
+function noteFlush() {
+  clearTimeout(noteTimer);
+  noteTimer = null;
+  var today = todayKey();
+  if ((state.notes[today] || "") !== $("noteInput").value) {
+    state.notes[today] = $("noteInput").value;
+    saveState();
+  }
+}
+
+function noteChanged() {
+  clearTimeout(noteTimer);
+  noteTimer = setTimeout(noteFlush, 400);
 }
 
 function renderStats() {
@@ -624,6 +1112,197 @@ function statBox(icon, value, label) {
   return box;
 }
 
+/* ==================# تولدها و یادآور #================== */
+
+// نزدیک‌ترین تولدِ «بعدی» یک نفر + چند سالگی می‌شود
+function scanBirthday(b, cal, day) {
+  for (var i = 0; i <= 372; i++) {
+    var key = keyFromTodayPlus(i);
+    var pr = partsFor(key, cal);
+    if (pr.dayN === day && pr.monthN === b.m) {
+      return { inDays: i, key: key, age: Math.max(0, pr.yearN - b.y) };
+    }
+  }
+  return null;
+}
+
+function nextBirthdayInfo(b) {
+  var cal = b.calendar === "greg" ? "greg" : "jal";
+  var found = scanBirthday(b, cal, b.d);
+  // فال‌بک: تولد ۳۰ اسفند در سال غیرکبیسه → ۲۹ اسفند
+  if (!found && cal === "jal" && b.m === 12 && b.d === 30) found = scanBirthday(b, cal, 29);
+  return found;
+}
+
+function renderBdayBanner() {
+  var el = $("bdayBanner");
+  if (!state.birthdays || state.birthdays.length === 0) { el.style.display = "none"; return; }
+  var todays = [];
+  for (var i = 0; i < state.birthdays.length; i++) {
+    var info = nextBirthdayInfo(state.birthdays[i]);
+    if (info && info.inDays === 0) todays.push({ name: state.birthdays[i].name, age: info.age });
+  }
+  if (todays.length === 0) { el.style.display = "none"; return; }
+  var txt = todays.map(function (t) { return "«" + t.name + "» (" + toFa(t.age) + " سالگی)"; }).join(" و ");
+  el.textContent = "🎂🎉 امروز تولد " + txt + " مبارک!";
+  el.style.display = "block";
+}
+
+function renderBirthdays() {
+  var list = $("bdayList");
+  list.textContent = "";
+  if (!state.birthdays || state.birthdays.length === 0) {
+    var e = document.createElement("div");
+    e.className = "empty-msg";
+    e.textContent = "تا حالا تولدی ثبت نکردی. اسم و تاریخش رو ثبت کن تا یادت نره! 🎂";
+    list.appendChild(e);
+    return;
+  }
+  var rows = [];
+  for (var i = 0; i < state.birthdays.length; i++) {
+    rows.push({ b: state.birthdays[i], info: nextBirthdayInfo(state.birthdays[i]) });
+  }
+  rows.sort(function (a, bb) {
+    if (a.info && bb.info) return a.info.inDays - bb.info.inDays;
+    if (a.info) return -1;
+    if (bb.info) return 1;
+    return a.b.name.localeCompare(bb.b.name, "fa");
+  });
+  for (var r = 0; r < rows.length; r++) list.appendChild(buildBdayRow(rows[r].b, rows[r].info));
+}
+
+function buildBdayRow(b, info) {
+  var row = document.createElement("div");
+  row.className = "bday-row" + (info && info.inDays === 0 ? " today-row" : "");
+
+  var name = document.createElement("span");
+  name.className = "bday-name";
+  name.textContent = b.name;
+
+  var when = document.createElement("span");
+  when.className = "bday-when";
+  if (!info) {
+    when.textContent = "تاریخ نامعتبر ⚠️ (" + toFa(b.y) + "/" + toFa(b.m) + "/" + toFa(b.d) + ")";
+  } else if (info.inDays === 0) {
+    when.textContent = toFa(info.age) + " سالگی شد! 🎉";
+    when.classList.add("bday-soon");
+  } else if (info.inDays <= 7) {
+    when.textContent = toFa(info.inDays) + " روز مانده • " + faDate(info.key);
+    when.classList.add("bday-soon");
+  } else {
+    when.textContent = toFa(info.inDays) + " روز مانده • " + faDate(info.key) + " • " + toFa(info.age) + " سالگی";
+  }
+
+  var del = document.createElement("button");
+  del.className = "task-delete";
+  del.type = "button";
+  del.title = "حذف";
+  del.setAttribute("aria-label", "حذف تولد: " + b.name);
+  del.textContent = "🗑️";
+  del.addEventListener("click", function () { deleteBirthday(b.id); });
+
+  row.appendChild(name);
+  row.appendChild(when);
+  row.appendChild(del);
+  return row;
+}
+
+function deleteBirthday(id) {
+  var b = null;
+  for (var i = 0; i < state.birthdays.length; i++) {
+    if (state.birthdays[i].id === id) b = state.birthdays[i];
+  }
+  if (!b) return;
+  if (!window.confirm("تولد «" + b.name + "» پاک بشه؟")) return;
+  state.birthdays = state.birthdays.filter(function (x) { return x.id !== id; });
+  saveState();
+  renderAll();
+  showToast("پاک شد 🗑️");
+}
+
+// فرم تولد
+$("bdayForm").addEventListener("submit", function (e) {
+  e.preventDefault();
+  var name = $("bdayName").value.trim();
+  var cal = $("bdayCal").value === "greg" ? "greg" : "jal";
+  var y = parseInt($("bdayY").value, 10);
+  var m = parseInt($("bdayM").value, 10);
+  var d = parseInt($("bdayD").value, 10);
+  if (!name) { showToast("نام رو بنویس 🙂"); return; }
+  if (!y || !m || !d) { showToast("سال و ماه و روز تولد رو کامل وارد کن"); return; }
+  if (m < 1 || m > 12 || d < 1 || d > 31) { showToast("ماه باید ۱ تا ۱۲ و روز ۱ تا ۳۱ باشه"); return; }
+  if (y < 1000 || y > 2200) { showToast("سال معتبر نیست"); return; }
+  var info = nextBirthdayInfo({ name: name, y: y, m: m, d: d, calendar: cal });
+  if (!info) { showToast("این تاریخ توی تقویم وجود نداره ⚠️"); return; }
+  var id = Date.now();
+  while (state.birthdays.some(function (x) { return x.id === id; })) id += 1;
+  state.birthdays.push({ id: id, name: name, y: y, m: m, d: d, calendar: cal });
+  saveState();
+  renderAll();
+  $("bdayName").value = ""; $("bdayY").value = ""; $("bdayM").value = ""; $("bdayD").value = "";
+  showToast("ثبت شد 🎂 " + relLabel(info.key) + " • " + faDate(info.key));
+});
+
+// یادآور اعلان مرورگر
+function renderNotifyBtn() {
+  var btn = $("notifyBtn");
+  if (typeof Notification === "undefined") {
+    btn.textContent = "🔔 یادآور اعلان (مرورگرت پشتیبانی نمی‌کند)";
+    btn.disabled = true;
+    return;
+  }
+  btn.disabled = false;
+  if (state.notifyOn) btn.textContent = "🔔 یادآور فعال است ✅";
+  else if (Notification.permission === "granted") btn.textContent = "🔔 یادآور مرورگر — روشن کن";
+  else btn.textContent = "🔔 یادآور مرورگر — اجازه بده";
+}
+
+$("notifyBtn").addEventListener("click", function () {
+  if (typeof Notification === "undefined") { showToast("مرورگرت اعلان را پشتیبانی نمی‌کند ❌"); return; }
+  if (state.notifyOn) {
+    state.notifyOn = false;
+    saveState();
+    renderNotifyBtn();
+    showToast("یادآور خاموش شد 🔕");
+    return;
+  }
+  if (Notification.permission === "granted") {
+    state.notifyOn = true;
+    saveState();
+    renderNotifyBtn();
+    showToast("یادآور روشن شد 🔔");
+    maybeNotifyBirthday();
+    return;
+  }
+  Notification.requestPermission().then(function (p) {
+    if (p === "granted") {
+      state.notifyOn = true;
+      saveState();
+      renderNotifyBtn();
+      showToast("یادآور روشن شد 🔔");
+      maybeNotifyBirthday();
+    } else {
+      showToast("اجازه‌ی اعلان داده نشد 😕");
+    }
+  }).catch(function () { showToast("درخواست اجازه ناموفق بود"); });
+});
+
+function maybeNotifyBirthday() {
+  if (!state.notifyOn) return;
+  if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
+  var today = todayKey();
+  if (state.lastNotifyDay === today) return;
+  var names = [];
+  for (var i = 0; i < state.birthdays.length; i++) {
+    var info = nextBirthdayInfo(state.birthdays[i]);
+    if (info && info.inDays === 0) names.push(state.birthdays[i].name);
+  }
+  if (names.length === 0) return;
+  try { new Notification("🎂 تولد!", { body: "امروز تولد " + names.join(" و ") + " است!" }); } catch (e) {}
+  state.lastNotifyDay = today;
+  saveState();
+}
+
 /* ==================# پشتیبان‌گیری #================== */
 
 function exportData() {
@@ -656,9 +1335,15 @@ function importData(file) {
         tasks: data.tasks.filter(function (t) {
           return t && typeof t.title === "string" && t.title.trim() && typeof t.createdAt === "number";
         }).map(function (t) {
-          return { id: typeof t.id === "number" ? t.id : t.createdAt, title: t.title.trim(), createdAt: t.createdAt };
+          var tt = { id: typeof t.id === "number" ? t.id : t.createdAt, title: t.title.trim(), createdAt: t.createdAt };
+          if (typeof t.due === "string" && /^\d{4}-\d{2}-\d{2}$/.test(t.due)) tt.due = t.due;
+          if (t.star === true) tt.star = true;
+          return tt;
         }),
-        history: (data.history && typeof data.history === "object") ? data.history : {}
+        history: (data.history && typeof data.history === "object") ? data.history : {},
+        birthdays: Array.isArray(data.birthdays) ? data.birthdays : [],
+        brain: Array.isArray(data.brain) ? data.brain : [],
+        notes: (data.notes && typeof data.notes === "object") ? data.notes : {}
       };
 
       // ادغام کارها (بدون تکرار بر اساس id؛ اگر id نبود بر اساس عنوان)
@@ -673,10 +1358,30 @@ function importData(file) {
         if (typeof state.history[key] === "undefined") state.history[key] = incoming.history[key];
         else for (var id in incoming.history[key]) { state.history[key][id] = true; }
       }
+      // ادغام ذهن‌خالی
+      var seenC = {};
+      for (var ci = 0; ci < state.brain.length; ci++) seenC[state.brain[ci].id] = true;
+      for (var cj = 0; cj < incoming.brain.length; cj++) {
+        var cc = incoming.brain[cj];
+        if (cc && typeof cc.id === "number" && cc.text && cc.text.trim() && !seenC[cc.id]) { state.brain.push(cc); seenC[cc.id] = true; }
+      }
+      // ادغام یادداشت‌ها
+      for (var nk in incoming.notes) {
+        if (typeof state.notes[nk] === "undefined" && incoming.notes[nk]) state.notes[nk] = incoming.notes[nk];
+      }
+      // ادغام تولدها
+      var seenB = {};
+      for (var bi = 0; bi < state.birthdays.length; bi++) seenB[state.birthdays[bi].id] = true;
+      for (var bj = 0; bj < incoming.birthdays.length; bj++) {
+        var bb = incoming.birthdays[bj];
+        if (bb && typeof bb.id === "number" && !seenB[bb.id]) { state.birthdays.push(bb); seenB[bb.id] = true; }
+      }
+      if (!state.notifyOn && incoming.notifyOn) state.notifyOn = true;
       // پاکسازی داده‌های معیوب احتمالی
       state = sanitize(state);
       saveState();
       renderAll();
+      renderNotifyBtn();
       showToast("پشتیبان بازیابی شد ✅");
     } catch (e) {
       showToast("فایل پشتیبان معتبر نیست ❌");
@@ -687,12 +1392,15 @@ function importData(file) {
 }
 
 function sanitize(s) {
-  var clean = { tasks: [], history: {} };
+  var clean = { tasks: [], history: {}, birthdays: [] };
   if (Array.isArray(s.tasks)) {
     for (var i = 0; i < s.tasks.length; i++) {
       var t = s.tasks[i];
       if (t && typeof t.id === "number" && typeof t.title === "string" && t.title.trim() && typeof t.createdAt === "number") {
-        clean.tasks.push({ id: t.id, title: t.title.trim(), createdAt: t.createdAt });
+        var due = (typeof t.due === "string" && /^\d{4}-\d{2}-\d{2}$/.test(t.due)) ? t.due : null;
+        var task = { id: t.id, title: t.title.trim(), createdAt: t.createdAt, star: t.star === true };
+        if (due) task.due = due;
+        clean.tasks.push(task);
       }
     }
   }
@@ -705,15 +1413,307 @@ function sanitize(s) {
       }
     }
   }
+  if (Array.isArray(s.birthdays)) {
+    for (var bi = 0; bi < s.birthdays.length; bi++) {
+      var b = s.birthdays[bi];
+      if (b && typeof b.name === "string" && b.name.trim() && typeof b.id === "number" &&
+          typeof b.y === "number" && typeof b.m === "number" && typeof b.d === "number") {
+        var yy = Math.round(b.y), mm = Math.round(b.m), dd = Math.round(b.d);
+        if (yy >= 1000 && yy <= 2200 && mm >= 1 && mm <= 12 && dd >= 1 && dd <= 31) {
+          clean.birthdays.push({ id: b.id, name: b.name.trim(), y: yy, m: mm, d: dd, calendar: b.calendar === "greg" ? "greg" : "jal" });
+        }
+      }
+    }
+  }
+  if (typeof s.notifyOn === "boolean") clean.notifyOn = s.notifyOn;
+  if (typeof s.lastNotifyDay === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s.lastNotifyDay)) clean.lastNotifyDay = s.lastNotifyDay;
+  // 🧠 ذهن‌خالی
+  clean.brain = [];
+  if (Array.isArray(s.brain)) {
+    for (var ci = 0; ci < s.brain.length; ci++) {
+      var c = s.brain[ci];
+      if (c && typeof c.id === "number" && typeof c.text === "string" && c.text.trim() && typeof c.createdAt === "number" && c.text.length <= 200) {
+        clean.brain.push({ id: c.id, text: c.text.trim(), createdAt: c.createdAt });
+      }
+    }
+  }
+  // 📝 یادداشت‌ها
+  clean.notes = {};
+  if (s.notes && typeof s.notes === "object") {
+    for (var nk in s.notes) {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(nk) && typeof s.notes[nk] === "string" && s.notes[nk].length <= 2000) {
+        clean.notes[nk] = s.notes[nk];
+      }
+    }
+  }
+  markDirty();
   return clean;
 }
+
+/* ==================# قفل رمز #================== */
+
+var LOCK_PREFIX = "ENC1:";
+var lockState = { enabled: false, locked: false, key: null, salt: null };
+var lockMode = "unlock";
+var lockFailCount = 0;
+var lockWaitUntil = 0;
+
+function b2b64(buf) {
+  var arr = new Uint8Array(buf), s = "";
+  for (var i = 0; i < arr.length; i++) s += String.fromCharCode(arr[i]);
+  return btoa(s);
+}
+
+function b642buf(s) {
+  var bin = atob(s), arr = new Uint8Array(bin.length);
+  for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return arr;
+}
+
+function deriveKey(pin, saltB) {
+  return crypto.subtle.importKey("raw", new TextEncoder().encode(pin), "PBKDF2", false, ["deriveKey"]).then(function (base) {
+    return crypto.subtle.deriveKey({ name: "PBKDF2", salt: saltB, iterations: 150000, hash: "SHA-256" }, base, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+  });
+}
+
+function encryptText(keyObj, saltB, text) {
+  var iv = crypto.getRandomValues(new Uint8Array(12));
+  return crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, keyObj, new TextEncoder().encode(text)).then(function (ct) {
+    return LOCK_PREFIX + b2b64(saltB) + "|" + b2b64(iv) + "|" + b2b64(ct);
+  });
+}
+
+function showLock(mode, title) {
+  lockMode = mode;
+  $("lockTitle").textContent = title || "برای دیدن برنامه رمز رو وارد کن";
+  $("lockPin").value = "";
+  $("lockPin2").value = "";
+  $("lockPin2").style.display = mode === "set" ? "block" : "none";
+  $("lockError").textContent = "";
+  $("lockScreen").style.display = "flex";
+  setTimeout(function () {
+    try { $("lockPin").focus(); } catch (e) {}
+  }, 60);
+}
+
+function hideLock() {
+  $("lockScreen").style.display = "none";
+}
+
+function finishUnlock() {
+  lockState.locked = false;
+  hideLock();
+  markDirty();
+  setupChips();
+  renderNotifyBtn();
+  maybeNotifyBirthday();
+  renderAll();
+  refreshLockButtons();
+  lockFailCount = 0;
+  showToast("برنامه باز شد 👋");
+}
+
+function attemptUnlock(pin) {
+  if (Date.now() < lockWaitUntil) {
+    $("lockError").textContent = "چند لحظه صبر کن… ⏳";
+    return;
+  }
+  var raw = storageGetRaw();
+  if (!raw || raw.indexOf(LOCK_PREFIX) !== 0) {
+    lockState.locked = false;
+    hideLock();
+    markDirty();
+    setupChips();
+    renderNotifyBtn();
+    maybeNotifyBirthday();
+    renderAll();
+    refreshLockButtons();
+    return;
+  }
+  var parts = raw.slice(LOCK_PREFIX.length).split("|");
+  if (parts.length !== 3) {
+    $("lockError").textContent = "حافظه خراب است 😕";
+    return;
+  }
+  var saltB = b642buf(parts[0]);
+  var iv = b642buf(parts[1]);
+  var ct = b642buf(parts[2]);
+  deriveKey(pin, saltB).then(function (k) {
+    return crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, k, ct).then(function (pt) {
+      var obj = JSON.parse(new TextDecoder().decode(pt));
+      state = sanitize(obj);
+      lockState.enabled = true;
+      lockState.key = k;
+      lockState.salt = saltB;
+      finishUnlock();
+    });
+  }).catch(function () {
+    lockFailCount++;
+    if (lockFailCount >= 5) {
+      lockWaitUntil = Date.now() + 30 * 1000;
+      lockFailCount = 0;
+      $("lockError").textContent = "چند بار اشتباه بود — ۳۰ ثانیه صبر کن ⏳";
+    } else {
+      $("lockError").textContent = "رمز اشتباه ❌ (" + toFa(lockFailCount) + " بار)";
+    }
+  });
+}
+
+function enableLock(pin) {
+  if (typeof crypto === "undefined" || !crypto.subtle) {
+    showToast("مرورگرت رمزنگاری را پشتیبانی نمی‌کند ❌");
+    return;
+  }
+  var saltB = crypto.getRandomValues(new Uint8Array(16));
+  deriveKey(pin, saltB).then(function (k) {
+    lockState.enabled = true;
+    lockState.locked = false;
+    lockState.key = k;
+    lockState.salt = saltB;
+    return encryptText(k, saltB, JSON.stringify(state));
+  }).then(function (blob) {
+    storageSet(blob);
+    refreshLockButtons();
+    showToast("قفل فعال شد 🔒 از بازش دفعه‌ی بعد می‌خواهد");
+  }).catch(function () {
+    showToast("فعال‌سازی قفل ناموفق بود ❌");
+  });
+}
+
+function refreshLockButtons() {
+  var lockBtn = $("lockBtn");
+  var removeBtn = $("removeLockBtn");
+  if (lockState.enabled) {
+    lockBtn.textContent = "🔒 تغییر رمز قفل";
+    removeBtn.style.display = "inline-block";
+  } else {
+    lockBtn.textContent = "🔒 قفل با رمز";
+    removeBtn.style.display = "none";
+  }
+}
+
+$("lockForm").addEventListener("submit", function (e) {
+  e.preventDefault();
+  var p1 = $("lockPin").value;
+  if (lockMode === "set") {
+    var p2 = $("lockPin2").value;
+    if (!/^\d{4,12}$/.test(p1)) {
+      $("lockError").textContent = "رمز باید فقط عدد و ۴ تا ۱۲ رقم باشه";
+      return;
+    }
+    if (p1 !== p2) {
+      $("lockError").textContent = "دو رمز یکسان نیستن ❌";
+      return;
+    }
+    hideLock();
+    enableLock(p1);
+    return;
+  }
+  if (!p1) return;
+  attemptUnlock(p1);
+});
+
+$("lockBtn").addEventListener("click", function () {
+  if (typeof crypto === "undefined" || !crypto.subtle) {
+    showToast("مرورگرت رمزنگاری را پشتیبانی نمی‌کند ❌");
+    return;
+  }
+  if (lockState.enabled) {
+    showLock("set", "رمز جدید رو دو بار وارد کن");
+  } else {
+    showLock("set", "یک رمز (۴ تا ۱۲ رقم) تعیین کن ⚠️ اگر فراموشش کنی، داده‌ها دیگر قابل برگشت نیستن!");
+  }
+});
+
+$("removeLockBtn").addEventListener("click", function () {
+  if (!window.confirm("قفل رمز برداشته بشه؟ (داده‌ها می‌مانن، فقط رمز نمی‌خوان)")) return;
+  lockState.enabled = false;
+  lockState.key = null;
+  lockState.salt = null;
+  storageSet(JSON.stringify(state));
+  refreshLockButtons();
+  showToast("قفل برداشته شد 🔓");
+});
 
 /* ==================# رویدادها #================== */
 
 $("addForm").addEventListener("submit", function (e) {
   e.preventDefault();
+  if (chipSelection.mode === "custom" && !chipSelection.due) {
+    showToast("تاریخ دلخواه رو انتخاب کن یا «امروز» رو بزن");
+    return;
+  }
   var input = $("taskInput");
-  var res = addTask(input.value);
+  var res = addTask(input.value, chipSelection.due);
+  if (res.ok) {
+    input.value = "";
+    input.focus();
+    showToast(res.msg);
+    onChipClick("today");
+  } else {
+    showToast(res.msg);
+  }
+});
+
+// ست‌کردن چیپ‌های «برای چه روزی؟»
+var chipSelection = { mode: "today", due: null };
+
+var chipsSetup = false;
+
+function setupChips() {
+  if (chipsSetup) return;
+  chipsSetup = true;
+  var chips = document.querySelectorAll(".chip");
+  Array.prototype.forEach.call(chips, function (c) {
+    c.addEventListener("click", function () { onChipClick(c.getAttribute("data-mode")); });
+  });
+  $("dueDateInput").addEventListener("change", function () {
+    var v = this.value;
+    if (v && /^\d{4}-\d{2}-\d{2}$/.test(v)) {
+      chipSelection.mode = "custom";
+      chipSelection.due = v;
+      $("customChipLabel").textContent = faDate(v);
+    } else {
+      chipSelection.mode = "today";
+      chipSelection.due = null;
+      $("customChipLabel").textContent = "—";
+    }
+    this.style.display = "none";
+    styleChips();
+  });
+}
+
+function onChipClick(mode) {
+  if (mode === "custom") {
+    var input = $("dueDateInput");
+    input.style.display = input.style.display === "block" ? "none" : "block";
+    input.focus();
+    return;
+  }
+  chipSelection.mode = mode;
+  chipSelection.due = null;
+  if (mode === "d1") chipSelection.due = keyFromTodayPlus(1);
+  if (mode === "d3") chipSelection.due = keyFromTodayPlus(3);
+  if (mode === "d7") chipSelection.due = keyFromTodayPlus(7);
+  $("customChipLabel").textContent = "—";
+  $("dueDateInput").style.display = "none";
+  styleChips();
+}
+
+function styleChips() {
+  var chips = document.querySelectorAll(".chip");
+  Array.prototype.forEach.call(chips, function (c) {
+    var active = c.getAttribute("data-mode") === chipSelection.mode;
+    c.className = "chip" + (active ? " active" : "");
+  });
+}
+
+$("clearDayBtn").addEventListener("click", clearToday);
+
+$("brainForm").addEventListener("submit", function (e) {
+  e.preventDefault();
+  var input = $("brainInput");
+  var res = addBrain(input.value);
   if (res.ok) {
     input.value = "";
     input.focus();
@@ -722,8 +1722,16 @@ $("addForm").addEventListener("submit", function (e) {
     showToast(res.msg);
   }
 });
+$("brainInput").addEventListener("keydown", function (e) {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    $("brainForm").dispatchEvent(new Event("submit", { cancelable: true }));
+  }
+});
 
-$("clearDayBtn").addEventListener("click", clearToday);
+$("noteInput").addEventListener("input", noteChanged);
+$("noteInput").addEventListener("change", function () { noteFlush(); });
+$("noteInput").addEventListener("blur", function () { noteFlush(); });
 $("exportBtn").addEventListener("click", exportData);
 $("importBtn").addEventListener("click", function () { $("importFile").click(); });
 $("importFile").addEventListener("change", function (e) {
@@ -736,15 +1744,28 @@ $("importFile").addEventListener("change", function (e) {
 // اگر کاربر تغییر تاریخ بدهد (کامپیوتر روشن مانده)، صفحه خودش به روزرسانی می‌شود
 var lastRenderedDay = todayKey();
 setInterval(function () {
+  if (lockState.locked) return;
   if (todayKey() !== lastRenderedDay) {
     lastRenderedDay = todayKey();
+    markDirty();
     renderAll();
   }
+  maybeNotifyBirthday();
 }, 30 * 1000);
 
 // شروع
 state = sanitize(state);
-renderAll();
+if (bootEncrypted) {
+  lockState.locked = true;
+  showLock("unlock", "برای دیدن برنامه رمز رو وارد کن");
+} else {
+  setupChips();
+  renderNotifyBtn();
+  maybeNotifyBirthday();
+  markDirty();
+  renderAll();
+  refreshLockButtons();
+}
 </script>
 </body>
 </html>
