@@ -223,8 +223,8 @@
   <form class="lock-box" id="lockForm">
     <div class="lock-emoji">🔒</div>
     <div id="lockTitle">برای دیدن برنامه رمز رو وارد کن</div>
-    <input type="password" id="lockPin" inputmode="numeric" maxlength="12" autocomplete="off" placeholder="••••">
-    <input type="password" id="lockPin2" inputmode="numeric" maxlength="12" autocomplete="off" placeholder="تکرار رمز" style="display:none">
+    <input type="password" id="lockPin" inputmode="numeric" pattern="[0-9]*" maxlength="12" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="••••">
+    <input type="password" id="lockPin2" inputmode="numeric" pattern="[0-9]*" maxlength="12" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="تکرار رمز" style="display:none">
     <button type="submit" id="lockSubmit">باز کن</button>
     <div id="lockError"></div>
   </form>
@@ -284,6 +284,7 @@
 
   <div class="card">
     <h2 class="section-title">🎂 تولدها و یادآور</h2>
+    <button type="button" class="footer-btn" id="bdaySortBtn" style="margin-bottom:8px">⇅ زودترین تولدها اول</button>
     <form id="bdayForm">
       <div class="brow">
         <input type="text" id="bdayName" placeholder="نام شخص" maxlength="40" autocomplete="off">
@@ -1150,6 +1151,8 @@ function renderBdayBanner() {
 
 function renderBirthdays() {
   var list = $("bdayList");
+  var sortBtn = $("bdaySortBtn");
+  sortBtn.textContent = state.bdaySort === "alpha" ? "⇅ به ترتیب الفبا" : "⇅ زودترین تولدها اول";
   list.textContent = "";
   if (!state.birthdays || state.birthdays.length === 0) {
     var e = document.createElement("div");
@@ -1162,12 +1165,16 @@ function renderBirthdays() {
   for (var i = 0; i < state.birthdays.length; i++) {
     rows.push({ b: state.birthdays[i], info: nextBirthdayInfo(state.birthdays[i]) });
   }
-  rows.sort(function (a, bb) {
-    if (a.info && bb.info) return a.info.inDays - bb.info.inDays;
-    if (a.info) return -1;
-    if (bb.info) return 1;
-    return a.b.name.localeCompare(bb.b.name, "fa");
-  });
+  if (state.bdaySort === "alpha") {
+    rows.sort(function (a, bb) { return a.b.name.localeCompare(bb.b.name, "fa"); });
+  } else {
+    rows.sort(function (a, bb) {
+      if (a.info && bb.info) return a.info.inDays - bb.info.inDays;
+      if (a.info) return -1;
+      if (bb.info) return 1;
+      return a.b.name.localeCompare(bb.b.name, "fa");
+    });
+  }
   for (var r = 0; r < rows.length; r++) list.appendChild(buildBdayRow(rows[r].b, rows[r].info));
 }
 
@@ -1221,6 +1228,13 @@ function deleteBirthday(id) {
 }
 
 // فرم تولد
+$("bdaySortBtn").addEventListener("click", function () {
+  state.bdaySort = state.bdaySort === "alpha" ? "soon" : "alpha";
+  saveState();
+  renderBirthdays();
+  showToast(state.bdaySort === "alpha" ? "مرتب‌سازی الفبایی ⓐ" : "زودترین تولدها اول ⏳");
+});
+
 $("bdayForm").addEventListener("submit", function (e) {
   e.preventDefault();
   var name = $("bdayName").value.trim();
@@ -1427,6 +1441,7 @@ function sanitize(s) {
   }
   if (typeof s.notifyOn === "boolean") clean.notifyOn = s.notifyOn;
   if (typeof s.lastNotifyDay === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s.lastNotifyDay)) clean.lastNotifyDay = s.lastNotifyDay;
+  if (s.bdaySort === "alpha") clean.bdaySort = "alpha";
   // 🧠 ذهن‌خالی
   clean.brain = [];
   if (Array.isArray(s.brain)) {
@@ -1483,6 +1498,8 @@ function encryptText(keyObj, saltB, text) {
   });
 }
 
+var isTouchDevice = ("ontouchstart" in window) || (window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
+
 function showLock(mode, title) {
   lockMode = mode;
   $("lockTitle").textContent = title || "برای دیدن برنامه رمز رو وارد کن";
@@ -1491,9 +1508,12 @@ function showLock(mode, title) {
   $("lockPin2").style.display = mode === "set" ? "block" : "none";
   $("lockError").textContent = "";
   $("lockScreen").style.display = "flex";
-  setTimeout(function () {
-    try { $("lockPin").focus(); } catch (e) {}
-  }, 60);
+  // فوکوسِ دستیِ شروع → کیبوردِ موبایل را پنهان می‌کند؛ پس فقط دسکتاپ انجامش بده
+  if (!isTouchDevice) {
+    setTimeout(function () {
+      try { $("lockPin").focus(); } catch (e) {}
+    }, 60);
+  }
 }
 
 function hideLock() {
