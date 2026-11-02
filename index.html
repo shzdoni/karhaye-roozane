@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#4f46e5">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="کارهای روزانه">
+<title>کارهای روزانه من</title>
+<link rel="apple-touch-icon" href="data:image/png;base64,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">
+<style>
+  :root {
+    --bg: #f0f4f8;
+    --card: #ffffff;
+    --text: #1f2937;
+    --muted: #6b7280;
+    --primary: #4f46e5;
+    --primary-light: #eef2ff;
+    --success: #10b981;
+    --success-light: #d1fae5;
+    --danger: #ef4444;
+    --border: #e5e7eb;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Segoe UI", Tahoma, "Iranian Sans", sans-serif;
+    background: linear-gradient(160deg, #eef2ff 0%, #f0f4f8 40%, #fdf2f8 100%);
+    min-height: 100vh;
+    color: var(--text);
+    padding: 16px;
+    display: flex;
+    justify-content: center;
+  }
+  .app { width: 100%; max-width: 620px; }
+
+  header { text-align: center; margin-bottom: 20px; }
+  header h1 { font-size: 1.5rem; color: var(--primary); }
+  header .date { color: var(--muted); font-size: 0.9rem; margin-top: 4px; }
+
+  .card {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 14px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+  }
+
+  /* ---------- فرم اضافه کردن ---------- */
+  .add-form { display: flex; gap: 8px; }
+  .add-form input {
+    flex: 1;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 1rem;
+    font-family: inherit;
+    outline: none;
+    transition: border-color .2s;
+  }
+  .add-form input:focus { border-color: var(--primary); }
+  .add-form button {
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 18px;
+    font-size: 1rem;
+    font-family: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background .2s;
+  }
+  .add-form button:hover { background: #4338ca; }
+
+  /* ---------- نوار پیشرفت ---------- */
+  .progress-row { display: flex; align-items: center; gap: 10px; }
+  .progress-label { font-size: 0.9rem; white-space: nowrap; }
+  .progress-track {
+    flex: 1; height: 12px; background: var(--border);
+    border-radius: 999px; overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, var(--primary), var(--success));
+    border-radius: 999px;
+    transition: width .35s ease;
+  }
+  .celebrate { text-align: center; color: var(--success); font-weight: bold; margin-top: 8px; }
+
+  /* ---------- لیست کارها ---------- */
+  .task-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 4px;
+    border-bottom: 1px solid var(--border);
+  }
+  .task-item:last-child { border-bottom: none; }
+  .task-check {
+    width: 24px; height: 24px;
+    accent-color: var(--success);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .task-title { flex: 1; font-size: 1rem; word-break: break-word; }
+  .task-item.done .task-title {
+    text-decoration: line-through;
+    color: var(--muted);
+  }
+  .task-done-badge {
+    font-size: 0.85rem; color: var(--success);
+    white-space: nowrap; display: none;
+  }
+  .task-item.done .task-done-badge { display: inline; }
+  .task-delete {
+    background: none; border: none;
+    color: var(--muted); cursor: pointer;
+    font-size: 1.1rem; padding: 4px 6px;
+    border-radius: 8px;
+    transition: color .2s, background .2s;
+  }
+  .task-delete:hover { color: var(--danger); background: #fee2e2; }
+
+  .empty-msg { text-align: center; color: var(--muted); padding: 14px 0; }
+
+  /* ---------- آمار ---------- */
+  h2.section-title { font-size: 1.05rem; margin-bottom: 10px; color: var(--text); }
+  .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .stat-box {
+    background: var(--primary-light);
+    border-radius: 12px;
+    padding: 12px 6px;
+    text-align: center;
+  }
+  .stat-value { font-size: 1.3rem; font-weight: bold; color: var(--primary); }
+  .stat-box.green .stat-value { color: var(--success); }
+  .stat-label { font-size: 0.78rem; color: var(--muted); margin-top: 3px; }
+
+  .week-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .week-day { font-size: 0.85rem; color: var(--muted); width: 52px; white-space: nowrap; }
+  .week-track { flex: 1; height: 10px; background: var(--border); border-radius: 999px; overflow: hidden; }
+  .week-fill { height: 100%; background: var(--success); border-radius: 999px; transition: width .4s; }
+  .week-fill.today { background: var(--primary); }
+  .week-pct { font-size: 0.78rem; color: var(--muted); width: 42px; text-align: left; }
+
+  /* ---------- پاورقی ---------- */
+  .footer-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  .footer-btn {
+    background: none; border: 1px solid var(--border);
+    color: var(--muted); font-family: inherit;
+    border-radius: 10px; padding: 7px 14px;
+    font-size: 0.85rem; cursor: pointer;
+    transition: all .2s;
+  }
+  .footer-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+  .toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--text); color: #fff;
+    padding: 10px 18px; border-radius: 10px;
+    font-size: 0.9rem;
+    opacity: 0; pointer-events: none;
+    transition: opacity .3s;
+    z-index: 50;
+  }
+  .toast.show { opacity: 1; }
+
+  @media (max-width: 420px) {
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+    .week-day { width: 44px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>✅ کارهای روزانه من</h1>
+    <div class="date" id="dateText"></div>
+  </header>
+
+  <div class="card">
+    <form class="add-form" id="addForm" aria-label="افزودن کار جدید">
+      <input type="text" id="taskInput" placeholder="مثلاً: ۳۰ دقیقه ورزش کنم…" maxlength="80" autocomplete="off">
+      <button type="submit">➕ اضافه کن</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <div class="progress-row">
+      <span class="progress-label" id="progressLabel">۰ از ۰</span>
+      <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+      <span class="progress-label" id="progressPct">۰٪</span>
+    </div>
+    <div class="celebrate" id="celebrate" style="display:none"></div>
+
+    <div style="margin-top:10px">
+      <div id="taskList"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 class="section-title">📊 آمار من</h2>
+    <div class="stats-grid" id="statsGrid"></div>
+    <h2 class="section-title" style="margin-top:16px">📅 هفت روز اخیر</h2>
+    <div id="weekBars"></div>
+  </div>
+
+  <div class="footer-row">
+    <button class="footer-btn" id="exportBtn">⬇️ ذخیره پشتیبان</button>
+    <button class="footer-btn" id="importBtn">⬆️ بازیابی پشتیبان</button>
+    <button class="footer-btn" id="clearDayBtn">🔄 پاک کردن تیک‌های امروز</button>
+    <input type="file" id="importFile" accept=".json" hidden>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+
+/* ==================# ابزارها #================== */
+
+var STORAGE_KEY = "dailyTasksApp_v1";
+
+// تاریخ به‌صورت کلید yyyy-mm-dd بر اساس «تاریخ محلی» (نه UTC) تا باگ نیمه‌شب نداشته باشیم
+function dateKey(d) {
+  return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
+}
+function pad2(n) { return (n < 10 ? "0" : "") + n; }
+
+function todayKey() { return dateKey(new Date()); }
+
+// کلیدِ N روز قبل (تقویم محلی، بدون مشکل ساعت تابستانی)
+function keyDaysAgo(n) {
+  var d = new Date();
+  d = new Date(d.getFullYear(), d.getMonth(), d.getDate() - n);
+  return dateKey(d);
+}
+
+// نام روز هفته فارسی برای یک کلید
+var weekdayNames = ["یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه", "شنبه"];
+function weekdayNameFromKey(key) {
+  try {
+    var p = key.split("-");
+    var d = new Date(+p[0], +p[1] - 1, +p[2]);
+    return weekdayNames[d.getDay()];
+  } catch (e) { return ""; }
+}
+
+// تاریخ امروز به فارسی (تقویم شمسی با پشتیبانی مرورگر؛ در صورت خطا تاریخ میلادی)
+function todayPersian() {
+  try {
+    return new Date().toLocaleDateString("fa-IR", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+  } catch (e) {
+    return todayKey();
+  }
+}
+
+// تبدیل به اعداد فارسی برای نمایش
+var faDigits = ["۰", "۱", "۲", "۳", "۴", "۵", "۶", "۷", "۸", "۹"];
+function toFa(str) {
+  var s = String(str);
+  return s.replace(/[0-9]/g, function (c) { return faDigits[+c]; });
+}
+
+function $(id) { return document.getElementById(id); }
+
+function showToast(msg) {
+  var t = $("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(showToast._timer);
+  showToast._timer = setTimeout(function () { t.classList.remove("show"); }, 2200);
+}
+
+/* ==================# ذخیره‌سازی #================== */
+
+var fallbackStore = null; // اگر localStorage نبود یا خطا داد، حافظه‌ی موقت
+
+function storageGet() {
+  try {
+    var raw = window.localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    return fallbackStore ? JSON.parse(fallbackStore) : null;
+  }
+}
+
+function storageSave(state) {
+  var raw = JSON.stringify(state);
+  try {
+    window.localStorage.setItem(STORAGE_KEY, raw);
+  } catch (e) {
+    fallbackStore = raw;
+  }
+}
+
+/* ==================# وضعیت برنامه #================== */
+
+// state = { tasks: [{id, title, createdAt}], history: { "yyyy-mm-dd": { taskId: true } } }
+var state = loadState();
+
+function loadState() {
+  var s = storageGet();
+  var clean = { tasks: [], history: {} };
+  if (s && typeof s === "object") {
+    if (Array.isArray(s.tasks)) {
+      for (var i = 0; i < s.tasks.length; i++) {
+        var t = s.tasks[i];
+        if (t && typeof t.id === "number" && typeof t.title === "string" && t.title.trim() && typeof t.createdAt === "number") {
+          clean.tasks.push({ id: t.id, title: t.title.trim(), createdAt: t.createdAt });
+        }
+      }
+    }
+    if (s.history && typeof s.history === "object") {
+      var keys = Object.keys(s.history);
+      for (var k = 0; k < keys.length; k++) {
+        var day = s.history[keys[k]];
+        if (day && typeof day === "object") {
+          var dayClean = {};
+          var ids = Object.keys(day);
+          for (var j = 0; j < ids.length; j++) {
+            var id = +ids[j];
+            if (day[ids[j]] === true && !isNaN(id)) dayClean[id] = true;
+          }
+          clean.history[keys[k]] = dayClean;
+        }
+      }
+    }
+  }
+  return clean;
+}
+
+function saveState() { storageSave(state); }
+
+function doneMapFor(key) {
+  return state.history[key] || {};
+}
+
+/* ==================# منطق #================== */
+
+function addTask(title) {
+  var t = title.trim();
+  if (!t) return { ok: false, msg: "عنوان کار خالیه! یه چیزی بنویس." };
+  if (t.length > 80) return { ok: false, msg: "عنوان خیلی طولانیه (حداکثر ۸۰ حرف)." };
+
+  // جلوگیری از کار تکراری (مقایسه بدون فاصله‌های اضافه)
+  var norm = t.replace(/\s+/g, " ");
+  for (var i = 0; i < state.tasks.length; i++) {
+    if (state.tasks[i].title.replace(/\s+/g, " ") === norm) {
+      return { ok: false, msg: "این کار از قبل تو لیسته 🙂" };
+    }
+  }
+
+  var id = Date.now();
+  if (state.tasks.some(function (x) { return x.id === id; })) id += 1;
+
+  state.tasks.push({ id: id, title: t, createdAt: id });
+  saveState();
+  renderAll();
+  return { ok: true, msg: "اضافه شد ✅" };
+}
+
+function toggleDone(id) {
+  var today = todayKey();
+  if (!state.history[today]) state.history[today] = {};
+  var map = state.history[today];
+  if (map[id]) delete map[id];
+  else map[id] = true;
+  // نقشه‌ی خالی رو نگه نمی‌داریم تا فایل تمیز بمونه
+  if (Object.keys(map).length === 0) delete state.history[today];
+  saveState();
+  renderAll();
+}
+
+function removeTask(id) {
+  var task = null;
+  for (var i = 0; i < state.tasks.length; i++) {
+    if (state.tasks[i].id === id) task = state.tasks[i];
+  }
+  if (!task) return;
+  var ok = window.confirm("«" + task.title + "» برای همیشه از لیست پاک بشه؟ (آمار روزهای قبلی دست نمی‌خوره)");
+  if (!ok) return;
+
+  state.tasks = state.tasks.filter(function (t) { return t.id !== id; });
+  var today = todayKey();
+  if (state.history[today]) {
+    delete state.history[today][id];
+    if (Object.keys(state.history[today]).length === 0) delete state.history[today];
+  }
+  // حذف از تاریخچه‌ی همه‌ی روزها تا درصد روزهای قدیمی نیز منطقی بماند؟
+  // تصمیم: تاریخچه‌ی قدیمی را نگه می‌داریم (فقط تیک امروز حذف می‌شود) تا آمار گذشته واقعی بماند.
+  saveState();
+  renderAll();
+  showToast("پاک شد 🗑️");
+}
+
+function clearToday() {
+  if (window.confirm("همه‌ی تیک‌های امروز برداشته بشه؟")) {
+    delete state.history[todayKey()];
+    saveState();
+    renderAll();
+    showToast("تیک‌های امروز پاک شد 🔄");
+  }
+}
+
+// کسانی که در روزِ key «وجود داشته‌اند» = کارهایی که createdAt آن‌ها قبل از پایانٔ آن روز است
+function tasksExistingOn(key, taskList) {
+  var p = key.split("-");
+  var endOfDay = new Date(+p[0], +p[1] - 1, +p[2], 23, 59, 59).getTime();
+  var list = taskList || state.tasks;
+  return list.filter(function (t) { return t.createdAt <= endOfDay; });
+}
+
+function dayStats(key, taskList) {
+  var existing = tasksExistingOn(key, taskList);
+  var total = existing.length;
+  var done = 0;
+  if (total > 0) {
+    var map = doneMapFor(key);
+    for (var i = 0; i < existing.length; i++) {
+      if (map[existing[i].id]) done++;
+    }
+  }
+  var pct = total === 0 ? null : Math.round((done / total) * 100);
+  return { total: total, done: done, pct: pct };
+}
+
+// strconv: درصد روز کامل یعنی همه‌ی کارهای موجود آن روز تیک خورده باشند
+function currentStreakTodayState() {
+  // اگر امروز ۱۰۰٪ نیست، استریک از دیروز شمرده می‌شود؛ روزهایی بدون کار skip می‌شوند
+  var start = dayStats(todayKey()).pct === 100 ? 0 : 1;
+  var streak = 0;
+  for (var i = start; i < 3650; i++) {
+    var s = dayStats(keyDaysAgo(i));
+    if (s.total === 0) continue; // روز بی‌کار، نمی‌شکند و نمی‌شمارد
+    if (s.pct === 100) streak++;
+    else break;
+  }
+  return streak;
+}
+
+// بهترین استریک تاریخچه (روی حداکثر ۳۶۵۰ روز)
+function bestStreak() {
+  var best = 0, cur = 0;
+  for (var i = 3649; i >= 0; i--) {
+    var s = dayStats(keyDaysAgo(i));
+    if (s.total === 0) { continue; }
+    if (s.pct === 100) { cur++; if (cur > best) best = cur; }
+    else cur = 0;
+  }
+  // امروز که هنوز در حال انجام است، بالاتر از best فعلی ممکن نیست؛ ولی برای درستی، استریکِ فعلی را هم چک می‌کنیم
+  var cur2 = currentStreakTodayState();
+  return Math.max(best, cur2);
+}
+
+function totalDoneCount() {
+  var n = 0;
+  var keys = Object.keys(state.history);
+  for (var k = 0; k < keys.length; k++) {
+    n += Object.keys(state.history[keys[k]]).length;
+  }
+  return n;
+}
+
+function weekAverage() {
+  var sum = 0, cnt = 0;
+  for (var i = 0; i < 7; i++) {
+    var s = dayStats(keyDaysAgo(i));
+    if (s.pct !== null) { sum += s.pct; cnt++; }
+  }
+  return cnt === 0 ? null : Math.round(sum / cnt);
+}
+
+/* ==================# رندر #================== */
+
+function renderAll() {
+  renderHeader();
+  renderTasks();
+  renderStats();
+}
+
+function renderHeader() {
+  $("dateText").textContent = todayPersian();
+}
+
+function renderTasks() {
+  var list = $("taskList");
+  list.textContent = ""; // جلوگیری از تزریق HTML؛ همه را با DOM API می‌سازیم
+
+  var today = todayKey();
+  var map = doneMapFor(today);
+
+  if (state.tasks.length === 0) {
+    var empty = document.createElement("div");
+    empty.className = "empty-msg";
+    empty.textContent = "هنوز کاری اضافه نکردی. از فرم بالا شروع کن! 🌱";
+    list.appendChild(empty);
+  } else {
+    var sorted = state.tasks.slice().sort(function (a, b) {
+      if (a.createdAt !== b.createdAt) return a.createdAt - b.createdAt;
+      return a.title.localeCompare(b.title, "fa");
+    });
+    for (var i = 0; i < sorted.length; i++) {
+      list.appendChild(buildTaskRow(sorted[i], !!map[sorted[i].id]));
+    }
+  }
+
+  // پیشرفت
+  var s = dayStats(today);
+  if (s.total === 0) {
+    $("progressLabel").textContent = toFa("0 از 0");
+    $("progressPct").textContent = toFa("0") + "٪";
+    $("progressFill").style.width = "0%";
+    $("celebrate").style.display = "none";
+  } else {
+    $("progressLabel").textContent = toFa(s.done + " از " + s.total);
+    $("progressPct").textContent = toFa(s.pct) + "٪";
+    $("progressFill").style.width = s.pct + "%";
+
+    if (s.pct === 100) {
+      var cel = $("celebrate");
+      cel.style.display = "block";
+      var msgs = ["🎉 آفرین! امروز همه رو انجام دادی!", "🔥 عالی بودی! روز کامل تموم شد", "💪 قهرمان! همه تیک خورد"];
+      cel.textContent = msgs[Math.floor(Math.random() * msgs.length)];
+    } else {
+      $("celebrate").style.display = "none";
+    }
+  }
+}
+
+function buildTaskRow(task, done) {
+  var row = document.createElement("div");
+  row.className = "task-item" + (done ? " done" : "");
+
+  var cb = document.createElement("input");
+  cb.type = "checkbox";
+  cb.className = "task-check";
+  cb.checked = done;
+  cb.setAttribute("aria-label", task.title);
+  cb.addEventListener("change", function () { toggleDone(task.id); });
+
+  var title = document.createElement("span");
+  title.className = "task-title";
+  title.textContent = task.title; // امن: بدون innerHTML
+
+  var badge = document.createElement("span");
+  badge.className = "task-done-badge";
+  badge.textContent = "✔ انجام شد";
+
+  var del = document.createElement("button");
+  del.className = "task-delete";
+  del.type = "button";
+  del.title = "حذف کار";
+  del.setAttribute("aria-label", "حذف کار: " + task.title);
+  del.textContent = "🗑️";
+  del.addEventListener("click", function () { removeTask(task.id); });
+
+  row.appendChild(cb);
+  row.appendChild(title);
+  row.appendChild(badge);
+  row.appendChild(del);
+  return row;
+}
+
+function renderStats() {
+  var grid = $("statsGrid");
+  grid.textContent = "";
+
+  var streak = currentStreakTodayState();
+  var best = bestStreak();
+  var totalN = totalDoneCount();
+  var avg = weekAverage();
+
+  grid.appendChild(statBox("🔥", streak ? toFa(streak) : toFa(0), streak === 1 ? "روز متوالی کامل" : "روز متوالی کامل"));
+  grid.appendChild(statBox("🏆", toFa(best), "بهترین رکورد"));
+  grid.appendChild(statBox("✅", toFa(totalN), "مجموع کارهای انجام‌شده"));
+  grid.appendChild(statBox("📈", avg === null ? "—" : toFa(avg) + "٪", "میانگین هفت روز"));
+
+  // نوارهای هفت روز
+  var bars = $("weekBars");
+  bars.textContent = "";
+  for (var i = 6; i >= 0; i--) {
+    var key = keyDaysAgo(i);
+    var s = dayStats(key);
+    var row = document.createElement("div");
+    row.className = "week-bar-row";
+
+    var dayName = i === 0 ? "امروز" : (i === 1 ? "دیروز" : weekdayNameFromKey(key));
+    var dayEl = document.createElement("span");
+    dayEl.className = "week-day";
+    dayEl.textContent = dayName;
+
+    var track = document.createElement("div");
+    track.className = "week-track";
+    var fill = document.createElement("div");
+    fill.className = "week-fill" + (i === 0 ? " today" : "");
+    fill.style.width = (s.pct || 0) + "%";
+    track.appendChild(fill);
+
+    var pctEl = document.createElement("span");
+    pctEl.className = "week-pct";
+    pctEl.textContent = s.pct === null ? "—" : toFa(s.pct) + "٪";
+
+    row.appendChild(dayEl);
+    row.appendChild(track);
+    row.appendChild(pctEl);
+    bars.appendChild(row);
+  }
+}
+
+function statBox(icon, value, label) {
+  var box = document.createElement("div");
+  box.className = "stat-box green";
+  box.textContent = icon + " ";
+  var v = document.createElement("div");
+  v.className = "stat-value";
+  v.textContent = value;
+  var l = document.createElement("div");
+  l.className = "stat-label";
+  l.textContent = label;
+  box.appendChild(v);
+  box.appendChild(l);
+  return box;
+}
+
+/* ==================# پشتیبان‌گیری #================== */
+
+function exportData() {
+  try {
+    var blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "کارهای-روزانه-پشتیبان-" + todayKey() + ".json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    showToast("فایل پشتیبان ذخیره شد 💾");
+  } catch (e) {
+    showToast("مشکل در ذخیره پشتیبان ❌");
+  }
+}
+
+function importData(file) {
+  var reader = new FileReader();
+  reader.onload = function () {
+    try {
+      var data = JSON.parse(reader.result);
+      // اعتبارسنجی + ادغام با داده‌های فعلی (بدون از دست رفتن چیزی)
+      if (!data || typeof data !== "object" || !Array.isArray(data.tasks)) {
+        throw new Error("bad");
+      }
+      var incoming = {
+        tasks: data.tasks.filter(function (t) {
+          return t && typeof t.title === "string" && t.title.trim() && typeof t.createdAt === "number";
+        }).map(function (t) {
+          return { id: typeof t.id === "number" ? t.id : t.createdAt, title: t.title.trim(), createdAt: t.createdAt };
+        }),
+        history: (data.history && typeof data.history === "object") ? data.history : {}
+      };
+
+      // ادغام کارها (بدون تکرار بر اساس id؛ اگر id نبود بر اساس عنوان)
+      var seen = {};
+      for (var i = 0; i < state.tasks.length; i++) seen[state.tasks[i].id] = true;
+      for (var j = 0; j < incoming.tasks.length; j++) {
+        var t = incoming.tasks[j];
+        if (!seen[t.id]) { state.tasks.push(t); seen[t.id] = true; }
+      }
+      // ادغام تاریخچه
+      for (var key in incoming.history) {
+        if (typeof state.history[key] === "undefined") state.history[key] = incoming.history[key];
+        else for (var id in incoming.history[key]) { state.history[key][id] = true; }
+      }
+      // پاکسازی داده‌های معیوب احتمالی
+      state = sanitize(state);
+      saveState();
+      renderAll();
+      showToast("پشتیبان بازیابی شد ✅");
+    } catch (e) {
+      showToast("فایل پشتیبان معتبر نیست ❌");
+    }
+  };
+  reader.onerror = function () { showToast("خواندن فایل ناموفق بود ❌"); };
+  reader.readAsText(file);
+}
+
+function sanitize(s) {
+  var clean = { tasks: [], history: {} };
+  if (Array.isArray(s.tasks)) {
+    for (var i = 0; i < s.tasks.length; i++) {
+      var t = s.tasks[i];
+      if (t && typeof t.id === "number" && typeof t.title === "string" && t.title.trim() && typeof t.createdAt === "number") {
+        clean.tasks.push({ id: t.id, title: t.title.trim(), createdAt: t.createdAt });
+      }
+    }
+  }
+  if (s.history && typeof s.history === "object") {
+    for (var key in s.history) {
+      if (s.history[key] && typeof s.history[key] === "object") {
+        var day = {};
+        for (var id in s.history[key]) if (s.history[key][id] === true) day[id] = true;
+        if (Object.keys(day).length) clean.history[key] = day;
+      }
+    }
+  }
+  return clean;
+}
+
+/* ==================# رویدادها #================== */
+
+$("addForm").addEventListener("submit", function (e) {
+  e.preventDefault();
+  var input = $("taskInput");
+  var res = addTask(input.value);
+  if (res.ok) {
+    input.value = "";
+    input.focus();
+    showToast(res.msg);
+  } else {
+    showToast(res.msg);
+  }
+});
+
+$("clearDayBtn").addEventListener("click", clearToday);
+$("exportBtn").addEventListener("click", exportData);
+$("importBtn").addEventListener("click", function () { $("importFile").click(); });
+$("importFile").addEventListener("change", function (e) {
+  if (e.target.files && e.target.files[0]) {
+    importData(e.target.files[0]);
+    e.target.value = "";
+  }
+});
+
+// اگر کاربر تغییر تاریخ بدهد (کامپیوتر روشن مانده)، صفحه خودش به روزرسانی می‌شود
+var lastRenderedDay = todayKey();
+setInterval(function () {
+  if (todayKey() !== lastRenderedDay) {
+    lastRenderedDay = todayKey();
+    renderAll();
+  }
+}, 30 * 1000);
+
+// شروع
+state = sanitize(state);
+renderAll();
+</script>
+</body>
+</html>
