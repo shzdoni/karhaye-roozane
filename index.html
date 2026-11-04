@@ -175,6 +175,9 @@
 
   .task-star { background: none; border: none; cursor: pointer; font-size: 1rem; padding: 4px 6px; border-radius: 8px; transition: background .2s; }
   .task-star:hover { background: #fef9c3; }
+  .task-rep { background: none; border: none; cursor: pointer; font-size: .82rem; font-weight: bold; padding: 4px 6px; border-radius: 8px; transition: background .2s; color: var(--muted); }
+  .task-rep:hover { background: #dbeafe; }
+  .task-rep[title*="برداشتن"] { color: #0d9488; }
 
   #doneWrap { margin-top: 4px; }
   #doneWrap .task-item.done { background: #f0fdf4; border-color: #bbf7d0; }
@@ -640,6 +643,8 @@ function firstDoneDay(id) {
 
 // آیا کار یک‌بازی در روز key حاضر است؟
 function oneOffPresent(task, key) {
+  // کار تکراری: از روزِ سررسید به بعد هر روز حاضر است (تکرارش مهم نیست)
+  if (task.rep === true) return key >= task.due;
   var fd = firstDoneDay(task.id);
   if (fd !== null && fd < key) return false;      // قبلاً (قبل از این روز) تمام شده
   if (fd === key) return key >= task.due;          // همین امروز تمام شده: فقط اگر در روزِ سررسید/بعدِ آن
@@ -657,8 +662,8 @@ function tasksPresentOn(key) {
     if (t.due) {
       if (oneOffPresent(t, key)) list.push(t);
     } else if (t.createdAt <= endMs) {
-      // کارهای عادی یک‌بار مصرف‌اند: وقتی تیک خوردند، تمام شدند و از روزهای بعد حذف می‌شوند
-      if (fd === null || fd >= key) list.push(t);
+      // کار تکراری هر روز برمی‌گردد؛ کار عادی یک‌بارمصرف است و بعد از تیک حذف می‌شود
+      if (t.rep === true || fd === null || fd >= key) list.push(t);
     }
   }
   return list;
@@ -827,7 +832,8 @@ function renderDone() {
     var t = state.tasks[i];
     var fd = firstDoneDay(t.id);
     if (fd === null) continue;
-    (fd === today ? doneToday : doneOlder).push({ t: t, day: fd });
+    if (fd === today) doneToday.push({ t: t, day: fd });
+    else if (t.rep !== true) doneOlder.push({ t: t, day: fd }); // کارهای تکراری در آرشیو نمی‌آیند تا شلوغ نشود
   }
   doneToday.sort(function (a, b) { return a.t.createdAt - b.t.createdAt; });
   doneOlder.sort(function (a, b) { return a.day === b.day ? b.t.createdAt - a.t.createdAt : (a.day < b.day ? 1 : -1); });
@@ -871,7 +877,7 @@ function buildDoneRow(task, dayKey, isOlder) {
 
   var badge = document.createElement("span");
   badge.className = "done-day-badge";
-  badge.textContent = isOlder ? relLabel(dayKey) : "امروز";
+  badge.textContent = (isOlder ? relLabel(dayKey) : "امروز") + (task.rep === true ? " 🔁" : "");
 
   var undo = document.createElement("button");
   undo.className = "task-undo";
@@ -919,7 +925,9 @@ function renderFuture() {
   var future = [];
   for (var i = 0; i < state.tasks.length; i++) {
     var t = state.tasks[i];
-    if (t.due && diffDays(t.due, today) > 0 && firstDoneDay(t.id) === null) future.push(t);
+    var fd = firstDoneDay(t.id);
+    if (!t.due || diffDays(t.due, today) <= 0) continue;
+    if (t.rep === true ? fd !== today : fd === null) future.push(t);
   }
   future.sort(function (a, b) {
     var r = a.due - b.due ? (a.due < b.due ? -1 : 1) : 0;
@@ -963,9 +971,18 @@ function buildFutureRow(task) {
   del.textContent = "🗑️";
   del.addEventListener("click", function () { removeTask(task.id); });
 
+  var rep = document.createElement("button");
+  rep.className = "task-rep";
+  rep.type = "button";
+  rep.title = task.rep ? "هر روز تکرار می‌شود — برداشتن تکرار" : "هر روز تکرار شود";
+  rep.setAttribute("aria-label", "تکرار روزانه: " + task.title);
+  rep.textContent = task.rep ? "🔁" : "1×";
+  rep.addEventListener("click", function () { toggleRep(task.id); });
+
   row.appendChild(cb);
   row.appendChild(title);
   row.appendChild(when);
+  row.appendChild(rep);
   row.appendChild(del);
   return row;
 }
@@ -1016,12 +1033,31 @@ function buildTaskRow(task, done, opts) {
   star.textContent = task.star ? "⭐" : "☆";
   star.addEventListener("click", function () { toggleStar(task.id); });
 
+  var rep = document.createElement("button");
+  rep.className = "task-rep";
+  rep.type = "button";
+  rep.title = task.rep ? "هر روز تکرار می‌شود — برداشتن تکرار" : "هر روز تکرار شود";
+  rep.setAttribute("aria-label", "تکرار روزانه: " + task.title);
+  rep.textContent = task.rep ? "🔁" : "1×";
+  rep.addEventListener("click", function () { toggleRep(task.id); });
+
   row.appendChild(cb);
   row.appendChild(title);
   row.appendChild(badge);
   row.appendChild(star);
+  row.appendChild(rep);
   row.appendChild(del);
   return row;
+}
+
+function toggleRep(id) {
+  for (var i = 0; i < state.tasks.length; i++) {
+    if (state.tasks[i].id === id) { state.tasks[i].rep = !state.tasks[i].rep; break; }
+  }
+  saveState();
+  markDirty();
+  renderAll();
+  showToast(state.tasks.some(function (t) { return t.id === id && t.rep === true; }) ? "این کار هر روز تکرار می‌شود 🔁" : "تکرار برداشته شد (یک‌بارمصرف)");
 }
 
 function toggleStar(id) {
@@ -1483,6 +1519,7 @@ function importData(file) {
           var tt = { id: typeof t.id === "number" ? t.id : t.createdAt, title: t.title.trim(), createdAt: t.createdAt };
           if (typeof t.due === "string" && /^\d{4}-\d{2}-\d{2}$/.test(t.due)) tt.due = t.due;
           if (t.star === true) tt.star = true;
+          if (t.rep === true) tt.rep = true;
           return tt;
         }),
         history: (data.history && typeof data.history === "object") ? data.history : {},
@@ -1543,7 +1580,7 @@ function sanitize(s) {
       var t = s.tasks[i];
       if (t && typeof t.id === "number" && typeof t.title === "string" && t.title.trim() && typeof t.createdAt === "number") {
         var due = (typeof t.due === "string" && /^\d{4}-\d{2}-\d{2}$/.test(t.due)) ? t.due : null;
-        var task = { id: t.id, title: t.title.trim(), createdAt: t.createdAt, star: t.star === true };
+        var task = { id: t.id, title: t.title.trim(), createdAt: t.createdAt, star: t.star === true, rep: t.rep === true };
         if (due) task.due = due;
         clean.tasks.push(task);
       }
