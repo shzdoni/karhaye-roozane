@@ -208,6 +208,49 @@
   .rem-text { flex: 1; word-break: break-word; }
   .rem-row.fired .rem-text { text-decoration: line-through; color: var(--muted); }
   .rem-when { font-size: .8rem; color: var(--muted); white-space: nowrap; }
+
+  .quote-line { font-size: .82rem; color: var(--muted); margin-top: 6px; line-height: 1.8; }
+
+  .streak-badge { font-size: .72rem; color: #b45309; background: #fef3c7; border-radius: 999px; padding: 2px 8px; white-space: nowrap; font-weight: bold; }
+
+  .level-title { font-weight: bold; margin-bottom: 8px; font-size: .95rem; }
+  .level-track { height: 10px; background: #e5e7eb; border-radius: 999px; overflow: hidden; }
+  .level-fill { height: 100%; background: linear-gradient(90deg, var(--primary), #7c3aed); border-radius: 999px; transition: width .4s; }
+  .level-hint { font-size: .78rem; color: var(--muted); margin-top: 4px; margin-bottom: 12px; }
+
+  .heatmap { display: flex; flex-wrap: wrap; gap: 4px; }
+  .hm-cell { width: 22px; height: 22px; border-radius: 6px; background: #e5e7eb; box-sizing: border-box; }
+  .hm-empty { background: #f3f4f6; border: 1px dashed var(--border); }
+  .hm-zero { background: #fee2e2; }
+  .hm-low { background: #bbf7d0; }
+  .hm-mid { background: #4ade80; }
+  .hm-full { background: #16a34a; }
+
+  .wr-line { font-size: .88rem; padding: 6px 0; border-bottom: 1px dashed var(--border); }
+  .wr-line:last-child { border-bottom: none; }
+
+  .goal-row { padding: 10px 4px; border-bottom: 1px solid var(--border); }
+  .goal-row:last-child { border-bottom: none; }
+  .goal-title { display: block; font-weight: 600; font-size: .92rem; word-break: break-word; }
+  .goal-progress { display: block; font-size: .8rem; color: var(--muted); margin: 2px 0 6px; }
+  .goal-row.goal-done .goal-progress { color: #16a34a; font-weight: bold; }
+  .goal-track { height: 8px; background: #e5e7eb; border-radius: 999px; overflow: hidden; }
+  .goal-fill { height: 100%; background: linear-gradient(90deg, #16a34a, #4ade80); border-radius: 999px; transition: width .4s; }
+  .goal-row .task-delete { position: relative; top: -4px; }
+  #goalTask { flex: 1; min-width: 140px; }
+  #goalTarget { width: 90px; flex: none; }
+  #goalForm input, #goalForm select, #goalForm button[type="submit"] { border: 2px solid var(--border); border-radius: 10px; padding: 8px 10px; font-family: inherit; font-size: .9rem; outline: none; box-sizing: border-box; background: #fff; }
+  #goalForm input:focus, #goalForm select:focus { border-color: var(--primary); }
+  #goalForm button[type="submit"] { background: var(--primary); color: #fff; border: none; cursor: pointer; flex: none; }
+
+  .pomo-box { text-align: center; padding: 14px 8px; background: linear-gradient(180deg, #fff7ed, #fff); border: 2px solid #fed7aa; border-radius: 16px; }
+  #pomoLabel { font-size: .85rem; color: var(--muted); font-weight: bold; margin-bottom: 4px; }
+  #pomoTime { font-size: 2.6rem; font-weight: bold; color: #9a3412; direction: ltr; font-variant-numeric: tabular-nums; line-height: 1.2; }
+  .pomo-btns { display: flex; gap: 8px; justify-content: center; margin-top: 10px; }
+  #pomoStart { background: #ea580c; color: #fff; border: none; border-radius: 10px; padding: 10px 22px; font-family: inherit; font-size: 1rem; cursor: pointer; }
+  #pomoStart:hover { background: #c2410c; }
+  #pomoReset { background: #fff; color: var(--muted); border: 2px solid var(--border); border-radius: 10px; padding: 10px 16px; font-family: inherit; font-size: .9rem; cursor: pointer; }
+  .pomo-today { font-size: .82rem; color: var(--muted); margin-top: 10px; }
   #bdayForm .brow { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
   #bdayForm input, #bdayForm select { border: 2px solid var(--border); border-radius: 10px; padding: 8px 10px; font-family: inherit; font-size: .9rem; outline: none; box-sizing: border-box; }
   #bdayForm input:focus, #bdayForm select:focus { border-color: var(--primary); }
@@ -260,6 +303,7 @@
   <header>
     <h1>✅ کارهای روزانه من</h1>
     <div class="date" id="dateText"></div>
+    <div id="quoteLine" class="quote-line"></div>
   </header>
 
   <div class="card">
@@ -315,6 +359,19 @@
   </div>
 
   <div class="card">
+    <h2 class="section-title">🍅 تایمر تمرکز (پومودورو)</h2>
+    <div class="pomo-box">
+      <div id="pomoLabel">⏱️ زمان کار</div>
+      <div id="pomoTime">۲۵:۰۰</div>
+      <div class="pomo-btns">
+        <button type="button" id="pomoStart">▶️ شروع</button>
+        <button type="button" id="pomoReset">🔄 صفر</button>
+      </div>
+      <div id="pomoToday" class="pomo-today"></div>
+    </div>
+  </div>
+
+  <div class="card">
     <h2 class="section-title">🎂 تولدها و یادآور</h2>
     <button type="button" class="footer-btn" id="bdaySortBtn" style="margin-bottom:8px">⇅ زودترین تولدها اول</button>
     <form id="bdayForm">
@@ -364,9 +421,25 @@
 
   <div class="card">
     <h2 class="section-title">📊 آمار من</h2>
+    <div id="levelLine"></div>
     <div class="stats-grid" id="statsGrid"></div>
     <h2 class="section-title" style="margin-top:16px">📅 هفت روز اخیر</h2>
     <div id="weekBars"></div>
+    <h2 class="section-title" style="margin-top:16px">🗺️ سی روز اخیر</h2>
+    <div id="heatmap" class="heatmap"></div>
+    <div id="weekReview" style="margin-top:12px"></div>
+  </div>
+
+  <div class="card">
+    <h2 class="section-title">🎯 هدف هفتگی</h2>
+    <form id="goalForm">
+      <div class="brow">
+        <select id="goalTask" aria-label="انتخاب کار"></select>
+        <input type="number" id="goalTarget" min="1" max="70" placeholder="چند بار در هفته؟">
+        <button type="submit" id="goalSubmit">🎯 بساز</button>
+      </div>
+    </form>
+    <div id="goalList" style="margin-top:8px"></div>
   </div>
 
   <div class="card">
@@ -569,7 +642,7 @@ var bootEncrypted = false;
   try { raw = window.localStorage.getItem(STORAGE_KEY); } catch (e) {}
   if (typeof raw === "string" && raw.indexOf("ENC1:") === 0) bootEncrypted = true;
 })();
-var state = bootEncrypted ? { tasks: [], history: {}, birthdays: [], brain: [], notes: {}, reminders: [] } : loadState();
+var state = bootEncrypted ? { tasks: [], history: {}, birthdays: [], brain: [], notes: {}, reminders: [], goals: [], pomos: {} } : loadState();
 
 function loadState() {
   return sanitize(storageGet() || {});
@@ -770,6 +843,7 @@ function weekAverage() {
 
 function renderAll() {
   renderHeader();
+  renderQuote();
   renderBdayBanner();
   renderRemBanner();
   renderTasks();
@@ -778,9 +852,14 @@ function renderAll() {
   renderFocus();
   renderBrain();
   renderStats();
+  renderLevel();
+  renderHeatmap();
+  renderWeekReview();
+  renderGoals();
   renderNote();
   renderBirthdays();
   renderReminders();
+  pomoRender();
 }
 
 // اولویت چیدمان در لیست امروز: روزانه (۰) → سررسیدِ امروز (۱) → دیرکرد (۲)؛ ستاره‌دارتر
@@ -865,14 +944,19 @@ function renderDone() {
   olderWrap.textContent = "";
 
   var today = todayKey();
+  var doneTodayMap = doneMapFor(today);
   var doneToday = [];
   var doneOlder = [];
   for (var i = 0; i < state.tasks.length; i++) {
     var t = state.tasks[i];
-    var fd = firstDoneDay(t.id);
-    if (fd === null) continue;
-    if (fd === today) doneToday.push({ t: t, day: fd });
-    else if (t.rep !== true) doneOlder.push({ t: t, day: fd }); // کارهای تکراری در آرشیو نمی‌آیند تا شلوغ نشود
+    if (doneTodayMap[t.id]) {
+      // امروز تیک خورده (چه تکراری چه یک‌بارمصرف)
+      doneToday.push({ t: t, day: today });
+    } else {
+      var fd = firstDoneDay(t.id);
+      if (fd === null) continue;
+      if (t.rep !== true) doneOlder.push({ t: t, day: fd }); // کارهای تکراری در آرشیو نمی‌آیند تا شلوغ نشود
+    }
   }
   doneToday.sort(function (a, b) { return a.t.createdAt - b.t.createdAt; });
   doneOlder.sort(function (a, b) { return a.day === b.day ? b.t.createdAt - a.t.createdAt : (a.day < b.day ? 1 : -1); });
@@ -913,6 +997,17 @@ function buildDoneRow(task, dayKey, isOlder) {
   var title = document.createElement("span");
   title.className = "task-title";
   title.textContent = task.title;
+
+  if (task.rep === true) {
+    var st = taskStreak(task.id);
+    if (st >= 1) {
+      var sb = document.createElement("span");
+      sb.className = "streak-badge";
+      sb.textContent = "🔥 " + toFa(st) + " روز";
+      sb.title = "زنجیره — روزهای پشت‌سرهم";
+      row.appendChild(sb);
+    }
+  }
 
   var badge = document.createElement("span");
   badge.className = "done-day-badge";
@@ -1055,6 +1150,17 @@ function buildTaskRow(task, done, opts) {
   var badge = document.createElement("span");
   badge.className = "task-done-badge";
   badge.textContent = "✔ انجام شد";
+
+  if (task.rep === true) {
+    var st = taskStreak(task.id);
+    if (st >= 1) {
+      var sb = document.createElement("span");
+      sb.className = "streak-badge";
+      sb.textContent = "🔥 " + toFa(st) + " روز";
+      sb.title = "زنجیره — روزهای پشت‌سرهم";
+      row.appendChild(sb);
+    }
+  }
 
   var del = document.createElement("button");
   del.className = "task-delete";
@@ -1729,6 +1835,357 @@ $("remNotifyBtn").addEventListener("click", function () {
   }).catch(function () { showToast("درخواست اجازه ناموفق بود"); });
 });
 
+/* ==================# 💬 نقل‌قول روزانه #================== */
+
+var QUOTES = [
+  "شروع کردن، نصف انجام دادنه.",
+  "دیروز در رفت، امروز تازه است — همین حالا شروع کن.",
+  "کوچک ولی هر روز، بهتر از بزرگ ولی هیچ‌وقت.",
+  "تنبلی، قرضی است که به خودت می‌دهی و با بهره پس می‌گیری.",
+  "بیست‌وپنج دقیقه هم قول بده؛ بقیه‌اش خودش می‌آید.",
+  "زنجیره را نشکن — هر روز یک تیک، یک قدم به جلو.",
+  "کسی که منتظر انگیزه می‌ماند، منتظر می‌مانَد؛ نظم نمی‌خواهد حال داشته باشد.",
+  "امروزِ تو، دیروزِ «بعداً» بود که بالاخره رسید.",
+  "نظم، آزادی می‌آورد؛ بی‌نظمی، استرس.",
+  "کارهای بزرگ از کارهای کوچکِ تکراری ساخته می‌شوند.",
+  "بهترین وقت شروع کردن، همین ثانیه بود.",
+  "تو لازم نیست عالی باشی؛ فقط لازم است ادامه بدهی.",
+  "یک قدم کوچک امروز، بهتر از قدم بلندِ فردا.",
+  "موبایل را بگذار کنار؛ همان یک لحظه، نصف پیروزی است.",
+  "هر تیکِ امروز، تشکری است برای خودِ فردایت.",
+  "تنبلی صدای «بعداً» است؛ موفقیت صدای «الان».",
+  "استراحت جایزه‌ی کار است، نه جایگزینش.",
+  "خودت را به چیزهای بزرگ نترسان؛ فقط به پنج دقیقه‌ی اول متعهد باش.",
+  "هر روز کمی بهتر، بهتر از هر روز همان.",
+  "لذتِ واقعی بعد از کار است، نه جای آن.",
+  "قوی شدن سخت است؛ اما «همان‌جا ماندن» هم سختِ خودش را دارد. یکی را انتخاب کن.",
+  "آنچه امروز می‌کاری، فردا همان را درو می‌کنی.",
+  "تمرکز، عضله است؛ هر بار شروع، یک تمرین.",
+  "برنامه که باشد، حتی یک روزِ بد هم کل مسیر را خراب نمی‌کند.",
+  "از فردا نه؛ از همین لیست، از اولین تیک.",
+  "نظم کوچکِ امروز، آزادی بزرگِ فرداست.",
+  "هیچ‌کس پُر انرژی بیدار نمی‌شود؛ شروع می‌کنند و انرژی می‌آید.",
+  "خودت را با دیروزت مقایسه کن، نه با دیگران.",
+  "کار سخت، همان کارِ بدون بهانه است.",
+  "پیشرفت، داستانِ تلاش‌های کوچکِ تکراری است.",
+  "راحتیِ امروز، سختیِ فردا را می‌سازد — و برعکس.",
+  "وقتی نداری «حالشو کنی»، فقط شروع کن؛ حال وسط راه می‌آید.",
+  "صد تیک کوچک امروز، یک تغییر بزرگ سالِ دیگر.",
+  "هیچ روزی از دست رفته نیست؛ از همین روز ادامه بده.",
+  "نظم را دوست نداری؟ دوست داری نتیجه‌اش را داشته باشی — یکی‌ست!",
+  "تو از تنبلیِ امروزت یک سال دیگر خسته‌تر می‌شوی، نه از زحمتِ امروزت."
+];
+
+function renderQuote() {
+  var d = new Date();
+  var doy = Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 86400000);
+  $("quoteLine").textContent = "💬 " + QUOTES[doy % QUOTES.length];
+}
+
+/* ==================# 🔥 زنجیره‌ی هر کار #================== */
+
+// چند روز پشت‌سرهم این کار تیک خورده (اگر امروز نخورده، تا دیروز می‌شماریم)
+function taskStreak(id) {
+  var n = 0, i = 0;
+  if (!doneMapFor(todayKey())[id]) i = 1;
+  for (; i < 3650; i++) {
+    var h = state.history[keyDaysAgo(i)];
+    if (h && h[id]) n++;
+    else break;
+  }
+  return n;
+}
+
+/* ==================# 🏆 امتیاز و سطح #================== */
+
+var LEVELS = [
+  [0, "تازه‌کار 🌱"],
+  [50, "منظم 🌿"],
+  [150, "سخت‌کوش 🌳"],
+  [350, "پیگیر ⛰️"],
+  [700, "استاد انضباط 👑"],
+  [1500, "اسطوره 🚀"]
+];
+
+function renderLevel() {
+  var el = $("levelLine");
+  if (!el) return;
+  var pts = totalDoneCount();
+  var li = 0;
+  for (var i = 0; i < LEVELS.length; i++) if (pts >= LEVELS[i][0]) li = i;
+  var cur = LEVELS[li][0];
+  var next = li + 1 < LEVELS.length ? LEVELS[li + 1][0] : null;
+  el.textContent = "";
+  var t = document.createElement("div");
+  t.className = "level-title";
+  t.textContent = "🏆 " + toFa(pts) + " امتیاز • سطح: " + LEVELS[li][1];
+  el.appendChild(t);
+  if (next !== null) {
+    var track = document.createElement("div");
+    track.className = "level-track";
+    var fill = document.createElement("div");
+    fill.className = "level-fill";
+    fill.style.width = Math.min(100, Math.round(((pts - cur) / (next - cur)) * 100)) + "%";
+    track.appendChild(fill);
+    el.appendChild(track);
+    var hint = document.createElement("div");
+    hint.className = "level-hint";
+    hint.textContent = toFa(next - pts) + " امتیاز تا سطح بعد";
+    el.appendChild(hint);
+  }
+}
+
+/* ==================# 🗺️ نقشه‌ی حرارتی + مرور هفته #================== */
+
+function renderHeatmap() {
+  var el = $("heatmap");
+  if (!el) return;
+  el.textContent = "";
+  for (var i = 29; i >= 0; i--) {
+    var key = keyDaysAgo(i);
+    var s = dayStats(key);
+    var cell = document.createElement("div");
+    cell.className = "hm-cell";
+    if (s.pct === null) cell.classList.add("hm-empty");
+    else if (s.pct === 0) cell.classList.add("hm-zero");
+    else if (s.pct < 50) cell.classList.add("hm-low");
+    else if (s.pct < 100) cell.classList.add("hm-mid");
+    else cell.classList.add("hm-full");
+    cell.title = faDate(key) + " — " + (s.pct === null ? "بدون کار" : toFa(s.pct) + "٪");
+    el.appendChild(cell);
+  }
+}
+
+// شروع هفته: شنبه (هفته‌ی ایرانی)
+function weekStartKey() {
+  var d = new Date();
+  var off = (d.getDay() + 1) % 7;
+  return keyDaysAgo(off);
+}
+
+function renderWeekReview() {
+  var el = $("weekReview");
+  if (!el) return;
+  el.textContent = "";
+  var ws = weekStartKey();
+  var full = 0, sum = 0, cnt = 0, bestDay = null, bestPct = -1, ticks = 0;
+  for (var i = 0; ; i++) {
+    var key = keyDaysAgo(i);
+    if (key < ws) break;
+    var s = dayStats(key);
+    if (s.pct !== null) {
+      cnt++; sum += s.pct;
+      if (s.pct > bestPct) { bestPct = s.pct; bestDay = key; }
+      if (s.pct === 100) full++;
+    }
+    var h = state.history[key] || {};
+    for (var id in h) if (h[id] === true) ticks++;
+  }
+  if (cnt === 0) {
+    var m = document.createElement("div");
+    m.className = "empty-msg";
+    m.textContent = "این هفته هنوز کاری ثبت نشده — همین حالا یک تیک بزن! ⚡";
+    el.appendChild(m);
+    return;
+  }
+  var avg = Math.round(sum / cnt);
+  var l1 = document.createElement("div");
+  l1.className = "wr-line";
+  l1.textContent = "این هفته: میانگین " + toFa(avg) + "٪ • " + toFa(full) + " روزِ کامل ✅";
+  el.appendChild(l1);
+  var l2 = document.createElement("div");
+  l2.className = "wr-line";
+  l2.textContent = "بهترین روز: " + weekdayNameFromKey(bestDay) + " (" + toFa(bestPct) + "٪) • " + toFa(ticks) + " کار انجام دادی 💪";
+  el.appendChild(l2);
+}
+
+/* ==================# 🎯 هدف هفتگی #================== */
+
+function weekTicksFor(taskId) {
+  var ws = weekStartKey();
+  var n = 0;
+  for (var i = 0; ; i++) {
+    var key = keyDaysAgo(i);
+    if (key < ws) break;
+    if (state.history[key] && state.history[key][taskId]) n++;
+  }
+  return n;
+}
+
+function renderGoals() {
+  var list = $("goalList");
+  if (!list) return;
+  var sel = $("goalTask");
+  var curSel = sel.value;
+  sel.textContent = "";
+  var reps = state.tasks.filter(function (t) { return t.rep === true; });
+  if (reps.length === 0) {
+    var o0 = document.createElement("option");
+    o0.value = "";
+    o0.textContent = "اول یک کار 🔁 بساز…";
+    sel.appendChild(o0);
+  } else {
+    for (var i = 0; i < reps.length; i++) {
+      var o = document.createElement("option");
+      o.value = String(reps[i].id);
+      o.textContent = reps[i].title;
+      sel.appendChild(o);
+    }
+    var ids = {};
+    for (var k = 0; k < reps.length; k++) ids[String(reps[k].id)] = true;
+    sel.value = ids[curSel] ? curSel : String(reps[0].id);
+  }
+
+  list.textContent = "";
+  if (!state.goals || state.goals.length === 0) {
+    var e = document.createElement("div");
+    e.className = "empty-msg";
+    e.textContent = "مثلاً: «۴ بار ورزش در هفته» — مهم نیست کدام روز، مهم تعداد است! 🎯";
+    list.appendChild(e);
+    return;
+  }
+  for (var g = 0; g < state.goals.length; g++) {
+    var goal = state.goals[g];
+    var task = null;
+    for (var ti = 0; ti < state.tasks.length; ti++) if (state.tasks[ti].id === goal.taskId) task = state.tasks[ti];
+    list.appendChild(buildGoalRow(goal, task));
+  }
+}
+
+function buildGoalRow(goal, task) {
+  var row = document.createElement("div");
+  row.className = "goal-row";
+
+  var title = document.createElement("span");
+  title.className = "goal-title";
+
+  var when = document.createElement("span");
+  when.className = "goal-progress";
+
+  var track = document.createElement("div");
+  track.className = "goal-track";
+  var fill = document.createElement("div");
+  fill.className = "goal-fill";
+  track.appendChild(fill);
+
+  var del = document.createElement("button");
+  del.className = "task-delete";
+  del.type = "button";
+  del.title = "حذف هدف";
+  del.textContent = "🗑️";
+
+  if (!task) {
+    title.textContent = "کار حذف شده ⚠️";
+    when.textContent = "—";
+    fill.style.width = "0%";
+  } else {
+    title.textContent = "🎯 " + toFa(goal.target) + " بار در هفته: " + task.title;
+    var done = Math.min(weekTicksFor(task.id), goal.target);
+    var pct = Math.min(100, Math.round((done / goal.target) * 100));
+    fill.style.width = pct + "%";
+    when.textContent = done >= goal.target ? toFa(done) + " از " + toFa(goal.target) + " — انجام شد! 🎉" : toFa(done) + " از " + toFa(goal.target);
+    if (done >= goal.target) row.classList.add("goal-done");
+  }
+  del.addEventListener("click", function () { deleteGoal(goal.id); });
+
+  row.appendChild(title);
+  row.appendChild(when);
+  row.appendChild(track);
+  row.appendChild(del);
+  return row;
+}
+
+$("goalForm").addEventListener("submit", function (e) {
+  e.preventDefault();
+  var taskId = parseInt($("goalTask").value, 10);
+  var target = parseInt($("goalTarget").value, 10);
+  if (!taskId) { showToast("اول یک کار 🔁 بساز تا هدفش را تعیین کنی"); return; }
+  if (!target || target < 1 || target > 70) { showToast("تعداد باید بین ۱ تا ۷۰ باشد"); return; }
+  var id = Date.now();
+  while (state.goals.some(function (x) { return x.id === id; })) id += 1;
+  state.goals.push({ id: id, taskId: taskId, target: target });
+  $("goalTarget").value = "";
+  saveState();
+  renderAll();
+  showToast("هدف هفتگی ساخته شد 🎯");
+});
+
+function deleteGoal(id) {
+  if (!window.confirm("این هدف حذف بشه؟")) return;
+  state.goals = state.goals.filter(function (x) { return x.id !== id; });
+  saveState();
+  renderAll();
+  showToast("هدف پاک شد 🗑️");
+}
+
+/* ==================# 🍅 تایمر پومودورو #================== */
+
+var POMO_WORK = 25 * 60, POMO_BREAK = 5 * 60;
+var pomo = { mode: "work", left: POMO_WORK, running: false, timer: null };
+
+function pomoRender() {
+  var mm = Math.floor(pomo.left / 60), ss = pomo.left % 60;
+  $("pomoTime").textContent = toFa((mm < 10 ? "0" : "") + mm + ":" + (ss < 10 ? "0" : "") + ss);
+  $("pomoLabel").textContent = pomo.mode === "work" ? "⏱️ زمان کار" : "☕ استراحت";
+  $("pomoStart").textContent = pomo.running ? "⏸️ مکث" : "▶️ شروع";
+  var n = (state.pomos && state.pomos[todayKey()]) || 0;
+  $("pomoToday").textContent = n > 0 ? "🎉 امروز " + toFa(n) + " پومودورو کامل کردی" : "امروز هنوز پومودورویی کامل نکردی — فقط ۲۵ دقیقه!";
+}
+
+function pomoNotify(msg) {
+  try {
+    if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+      new Notification("🍅 پومودورو", { body: msg });
+    }
+  } catch (e) {}
+  showToast(msg);
+}
+
+function pomoTick() {
+  pomo.left--;
+  if (pomo.left <= 0) {
+    clearInterval(pomo.timer);
+    pomo.timer = null;
+    pomo.running = false;
+    if (pomo.mode === "work") {
+      var t = todayKey();
+      state.pomos[t] = (state.pomos[t] || 0) + 1;
+      saveState();
+      pomo.mode = "break";
+      pomo.left = POMO_BREAK;
+      pomoNotify("🍅 یک پومودورو تمام شد! ۵ دقیقه استراحت کن");
+    } else {
+      pomo.mode = "work";
+      pomo.left = POMO_WORK;
+      pomoNotify("☕ استراحت تمام شد — بریم سراغ ۲۵ دقیقه‌ی بعد");
+    }
+    renderAll();
+    return;
+  }
+  pomoRender();
+}
+
+$("pomoStart").addEventListener("click", function () {
+  if (pomo.running) {
+    clearInterval(pomo.timer);
+    pomo.timer = null;
+    pomo.running = false;
+  } else {
+    pomo.timer = setInterval(pomoTick, 1000);
+    pomo.running = true;
+  }
+  pomoRender();
+});
+
+$("pomoReset").addEventListener("click", function () {
+  clearInterval(pomo.timer);
+  pomo.timer = null;
+  pomo.running = false;
+  pomo.mode = "work";
+  pomo.left = POMO_WORK;
+  pomoRender();
+});
+
 /* ==================# پشتیبان‌گیری #================== */
 
 function exportData() {
@@ -1771,7 +2228,9 @@ function importData(file) {
         birthdays: Array.isArray(data.birthdays) ? data.birthdays : [],
         brain: Array.isArray(data.brain) ? data.brain : [],
         notes: (data.notes && typeof data.notes === "object") ? data.notes : {},
-        reminders: Array.isArray(data.reminders) ? data.reminders : []
+        reminders: Array.isArray(data.reminders) ? data.reminders : [],
+        goals: Array.isArray(data.goals) ? data.goals : [],
+        pomos: (data.pomos && typeof data.pomos === "object") ? data.pomos : {}
       };
 
       // ادغام کارها (بدون تکرار بر اساس id؛ اگر id نبود بر اساس عنوان)
@@ -1805,6 +2264,20 @@ function importData(file) {
         if (bb && typeof bb.id === "number" && !seenB[bb.id]) { state.birthdays.push(bb); seenB[bb.id] = true; }
       }
       if (!state.notifyOn && incoming.notifyOn) state.notifyOn = true;
+      // ادغام هدف‌های هفتگی
+      var seenG = {};
+      for (var gi0 = 0; gi0 < state.goals.length; gi0++) seenG[state.goals[gi0].id] = true;
+      for (var gj = 0; gj < incoming.goals.length; gj++) {
+        var gg = incoming.goals[gj];
+        if (gg && typeof gg.id === "number" && !seenG[gg.id]) { state.goals.push(gg); seenG[gg.id] = true; }
+      }
+      // ادغام پومودوروها (بیشینه)
+      for (var pk2 in incoming.pomos) {
+        if (/^\d{4}-\d{2}-\d{2}$/.test(pk2)) {
+          state.pomos[pk2] = Math.max(state.pomos[pk2] || 0, incoming.pomos[pk2] || 0);
+          if (state.pomos[pk2] <= 0) delete state.pomos[pk2];
+        }
+      }
       // ادغام یادآورها
       var seenR = {};
       for (var ri0 = 0; ri0 < state.reminders.length; ri0++) seenR[state.reminders[ri0].id] = true;
@@ -1863,6 +2336,25 @@ function sanitize(s) {
   if (typeof s.notifyOn === "boolean") clean.notifyOn = s.notifyOn;
   if (typeof s.lastNotifyDay === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s.lastNotifyDay)) clean.lastNotifyDay = s.lastNotifyDay;
   if (s.bdaySort === "alpha") clean.bdaySort = "alpha";
+  // 🎯 هدف‌های هفتگی
+  clean.goals = [];
+  if (Array.isArray(s.goals)) {
+    for (var gi = 0; gi < s.goals.length; gi++) {
+      var g = s.goals[gi];
+      if (g && typeof g.id === "number" && typeof g.taskId === "number" && typeof g.target === "number" && g.target >= 1 && g.target <= 70) {
+        clean.goals.push({ id: g.id, taskId: g.taskId, target: g.target });
+      }
+    }
+  }
+  // 🍅 پومودوروهای روزانه
+  clean.pomos = {};
+  if (s.pomos && typeof s.pomos === "object") {
+    for (var pk in s.pomos) {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(pk) && typeof s.pomos[pk] === "number" && s.pomos[pk] > 0 && s.pomos[pk] <= 99) {
+        clean.pomos[pk] = s.pomos[pk];
+      }
+    }
+  }
   // ⏰ یادآورها
   clean.reminders = [];
   if (Array.isArray(s.reminders)) {
