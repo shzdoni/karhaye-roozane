@@ -196,6 +196,18 @@
   .bday-when { font-size: .82rem; white-space: nowrap; }
   .bday-soon { color: #9d174d; font-weight: bold; }
   #bdayBanner { background: linear-gradient(90deg, #fdf2f8, #fef9c3); border: 2px solid #fbcfe8; color: #9d174d; border-radius: 14px; padding: 12px 14px; margin-bottom: 14px; text-align: center; font-weight: bold; }
+
+  #remBanner { background: linear-gradient(90deg, #eef2ff, #e0f2fe); border: 2px solid #c7d2fe; color: #3730a3; border-radius: 14px; padding: 12px 14px; margin-bottom: 14px; font-weight: bold; align-items: center; gap: 10px; }
+  #remBanner .rem-banner-text { flex: 1; word-break: break-word; }
+  #remBanner button { background: #4f46e5; color: #fff; border: none; border-radius: 10px; padding: 8px 14px; cursor: pointer; font-family: inherit; white-space: nowrap; }
+  #remForm input, #remForm select { border: 2px solid var(--border); border-radius: 10px; padding: 8px 10px; font-family: inherit; font-size: .9rem; outline: none; box-sizing: border-box; background: #fff; }
+  #remForm input:focus, #remForm select:focus { border-color: var(--primary); }
+  #remText { flex: 1; min-width: 140px; width: 100%; }
+  .rem-row { display: flex; align-items: center; gap: 8px; padding: 10px 4px; border-bottom: 1px solid var(--border); }
+  .rem-row:last-child { border-bottom: none; }
+  .rem-text { flex: 1; word-break: break-word; }
+  .rem-row.fired .rem-text { text-decoration: line-through; color: var(--muted); }
+  .rem-when { font-size: .8rem; color: var(--muted); white-space: nowrap; }
   #bdayForm .brow { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
   #bdayForm input, #bdayForm select { border: 2px solid var(--border); border-radius: 10px; padding: 8px 10px; font-family: inherit; font-size: .9rem; outline: none; box-sizing: border-box; }
   #bdayForm input:focus, #bdayForm select:focus { border-color: var(--primary); }
@@ -244,6 +256,7 @@
 </div>
 <div class="app">
   <div id="bdayBanner" style="display:none"></div>
+  <div id="remBanner" style="display:none"></div>
   <header>
     <h1>✅ کارهای روزانه من</h1>
     <div class="date" id="dateText"></div>
@@ -323,6 +336,30 @@
       <div id="bdayList"></div>
     </div>
     <button type="button" class="footer-btn" id="notifyBtn" style="margin-top:10px">🔔 یادآور مرورگر</button>
+  </div>
+
+  <div class="card">
+    <h2 class="section-title">⏰ یادآورها (ریمایندر)</h2>
+    <form id="remForm">
+      <div class="brow">
+        <input type="text" id="remText" placeholder="یادم باشه… مثلاً: تماس با بانک" maxlength="120" autocomplete="off">
+      </div>
+      <div class="brow">
+        <input type="date" id="remDate" aria-label="تاریخ یادآور">
+        <input type="time" id="remTime" aria-label="ساعت یادآور">
+        <select id="remRep" aria-label="تکرار">
+          <option value="once">یک‌بار</option>
+          <option value="daily">هر روز</option>
+          <option value="weekly">هر هفته</option>
+          <option value="yearly">هر سال</option>
+        </select>
+      </div>
+      <div class="brow">
+        <button type="submit" id="remSubmit">⏰ یادم بنداز</button>
+      </div>
+    </form>
+    <button type="button" class="footer-btn" id="remNotifyBtn" style="margin-top:8px">🔔 اجازه‌ی اعلان</button>
+    <div id="remList" style="margin-top:8px"></div>
   </div>
 
   <div class="card">
@@ -532,7 +569,7 @@ var bootEncrypted = false;
   try { raw = window.localStorage.getItem(STORAGE_KEY); } catch (e) {}
   if (typeof raw === "string" && raw.indexOf("ENC1:") === 0) bootEncrypted = true;
 })();
-var state = bootEncrypted ? { tasks: [], history: {}, birthdays: [], brain: [], notes: {} } : loadState();
+var state = bootEncrypted ? { tasks: [], history: {}, birthdays: [], brain: [], notes: {}, reminders: [] } : loadState();
 
 function loadState() {
   return sanitize(storageGet() || {});
@@ -734,6 +771,7 @@ function weekAverage() {
 function renderAll() {
   renderHeader();
   renderBdayBanner();
+  renderRemBanner();
   renderTasks();
   renderDone();
   renderFuture();
@@ -742,6 +780,7 @@ function renderAll() {
   renderStats();
   renderNote();
   renderBirthdays();
+  renderReminders();
 }
 
 // اولویت چیدمان در لیست امروز: روزانه (۰) → سررسیدِ امروز (۱) → دیرکرد (۲)؛ ستاره‌دارتر
@@ -1484,6 +1523,212 @@ function maybeNotifyBirthday() {
   saveState();
 }
 
+/* ==================# ⏰ یادآورها (ریمایندر) #================== */
+
+// زمانِ برقراریِ سررسید شماره idx از یک یادآور (میلی‌ثانیه)
+function remOccurMs(r, idx) {
+  var p = r.date.split("-");
+  var d = new Date(+p[0], +p[1] - 1, +p[2]);
+  if (r.rep === "daily") d.setDate(d.getDate() + idx);
+  else if (r.rep === "weekly") d.setDate(d.getDate() + 7 * idx);
+  else if (r.rep === "yearly") d.setFullYear(d.getFullYear() + idx);
+  var hh = 0, mm = 0;
+  if (r.time) { var tp = r.time.split(":"); hh = +tp[0]; mm = +tp[1]; }
+  d.setHours(hh, mm, 0, 0);
+  return d.getTime();
+}
+
+// کلید یکتای یک سررسید برای ثبتِ «اطلاع داده شد»
+function remKey(ms) {
+  var d = new Date(ms);
+  function pad(n) { return (n < 10 ? "0" : "") + n; }
+  return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + " " + pad(d.getHours()) + ":" + pad(d.getMinutes());
+}
+
+function remDayKey(ms) { return remKey(ms).slice(0, 10); }
+
+// آخرین سررسیدِ گذشته و اولین سررسیدِ آینده
+function remNextOccur(r) {
+  var now = Date.now();
+  var maxIdx = r.rep === "once" ? 0 : 400;
+  var lastPassed = null, nextFuture = null;
+  for (var i = 0; i <= maxIdx; i++) {
+    var ms = remOccurMs(r, i);
+    if (ms <= now) lastPassed = { i: i, ms: ms };
+    else { nextFuture = { i: i, ms: ms }; break; }
+  }
+  return { lastPassed: lastPassed, nextFuture: nextFuture };
+}
+
+function checkReminders() {
+  if (lockState.locked) return;
+  var changed = false;
+  var fired = [];
+  for (var i = 0; i < state.reminders.length; i++) {
+    var r = state.reminders[i];
+    var nx = remNextOccur(r);
+    if (nx.lastPassed && r.lastNotified !== remKey(nx.lastPassed.ms)) {
+      r.lastNotified = remKey(nx.lastPassed.ms);
+      changed = true;
+      fired.push(r);
+    }
+  }
+  if (changed) {
+    saveState();
+    for (var j = 0; j < fired.length; j++) {
+      try {
+        if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+          new Notification("⏰ یادآور", { body: fired[j].text });
+        }
+      } catch (e) {}
+    }
+    showToast("⏰ یادآور: " + fired[0].text);
+    renderAll();
+  }
+}
+
+function renderRemBanner() {
+  var el = $("remBanner");
+  var due = [];
+  for (var i = 0; i < state.reminders.length; i++) {
+    var r = state.reminders[i];
+    if (r.lastNotified && r.ack !== r.lastNotified) due.push(r);
+  }
+  if (due.length === 0) { el.style.display = "none"; return; }
+  el.style.display = "flex";
+  el.textContent = "";
+  var icon = document.createElement("span");
+  icon.textContent = "⏰";
+  var txt = document.createElement("span");
+  txt.className = "rem-banner-text";
+  txt.textContent = due.map(function (r) { return r.text; }).join(" • ");
+  var btn = document.createElement("button");
+  btn.type = "button";
+  btn.textContent = "✅ دیدم";
+  btn.addEventListener("click", function () {
+    for (var i = 0; i < state.reminders.length; i++) {
+      var r = state.reminders[i];
+      if (r.lastNotified && r.ack !== r.lastNotified) r.ack = r.lastNotified;
+    }
+    saveState();
+    renderAll();
+  });
+  el.appendChild(icon);
+  el.appendChild(txt);
+  el.appendChild(btn);
+}
+
+function renderReminders() {
+  var list = $("remList");
+  var dateInput = $("remDate");
+  var today = todayKey();
+  dateInput.min = today;
+  dateInput.max = keyFromTodayPlus(365);
+  list.textContent = "";
+
+  if (!state.reminders || state.reminders.length === 0) {
+    var e = document.createElement("div");
+    e.className = "empty-msg";
+    e.textContent = "هنوز یادآوری نگذاشتی. تاریخ و متنش رو بنویس تا یادت نندازم! ⏰";
+    list.appendChild(e);
+    return;
+  }
+
+  var rows = [];
+  for (var i = 0; i < state.reminders.length; i++) {
+    var r = state.reminders[i];
+    var nx = remNextOccur(r);
+    var fired = !!(nx.lastPassed && r.lastNotified === remKey(nx.lastPassed.ms));
+    rows.push({ r: r, nx: nx, fired: fired });
+  }
+  rows.sort(function (a, b) {
+    if (a.fired !== b.fired) return a.fired ? 1 : -1;
+    var am = a.fired ? a.nx.lastPassed.ms : (a.nx.nextFuture ? a.nx.nextFuture.ms : 0);
+    var bm = b.fired ? b.nx.lastPassed.ms : (b.nx.nextFuture ? b.nx.nextFuture.ms : 0);
+    return a.fired ? bm - am : am - bm;
+  });
+  for (var j = 0; j < rows.length; j++) list.appendChild(buildRemRow(rows[j].r, rows[j].nx, rows[j].fired));
+}
+
+function buildRemRow(r, nx, fired) {
+  var row = document.createElement("div");
+  row.className = "rem-row" + (fired ? " fired" : "");
+
+  var text = document.createElement("span");
+  text.className = "rem-text";
+  text.textContent = r.text;
+
+  var when = document.createElement("span");
+  when.className = "rem-when";
+  if (fired) {
+    when.textContent = "✔ اطلاع داده شد";
+  } else if (nx.nextFuture) {
+    var lbl = relLabel(remDayKey(nx.nextFuture.ms));
+    if (r.time) lbl += " • ساعت " + toFa(r.time);
+    if (r.rep !== "once") lbl += " • " + (r.rep === "daily" ? "هر روز" : r.rep === "weekly" ? "هر هفته" : "هر سال");
+    when.textContent = lbl;
+  }
+
+  var del = document.createElement("button");
+  del.className = "task-delete";
+  del.type = "button";
+  del.title = "حذف یادآور";
+  del.setAttribute("aria-label", "حذف یادآور: " + r.text);
+  del.textContent = "🗑️";
+  del.addEventListener("click", function () { deleteReminder(r.id); });
+
+  row.appendChild(text);
+  row.appendChild(when);
+  row.appendChild(del);
+  return row;
+}
+
+function addReminder(text, date, time, rep) {
+  if (!text) return { ok: false, msg: "متن یادآور را بنویس 🙂" };
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return { ok: false, msg: "تاریخ را انتخاب کن" };
+  var today = todayKey();
+  if (date < today) return { ok: false, msg: "تاریخ گذشته است 😅" };
+  if (diffDays(date, today) > 365) return { ok: false, msg: "تا یک سال دیگر می‌توانی بگذاری ⏳" };
+  var id = Date.now();
+  while (state.reminders.some(function (x) { return x.id === id; })) id += 1;
+  state.reminders.push({ id: id, text: text, date: date, time: time, rep: rep, lastNotified: null, ack: null });
+  saveState();
+  renderAll();
+  return { ok: true, msg: "یادم می‌مونه ⏰ " + relLabel(date) };
+}
+
+function deleteReminder(id) {
+  var r = null;
+  for (var i = 0; i < state.reminders.length; i++) {
+    if (state.reminders[i].id === id) r = state.reminders[i];
+  }
+  if (!r) return;
+  if (!window.confirm("یادآور «" + r.text + "» پاک بشه؟")) return;
+  state.reminders = state.reminders.filter(function (x) { return x.id !== id; });
+  saveState();
+  renderAll();
+  showToast("یادآور پاک شد 🗑️");
+}
+
+$("remForm").addEventListener("submit", function (e) {
+  e.preventDefault();
+  var res = addReminder($("remText").value.trim(), $("remDate").value, $("remTime").value || null, $("remRep").value);
+  if (res.ok) {
+    $("remText").value = "";
+    $("remTime").value = "";
+  }
+  showToast(res.msg);
+});
+
+$("remNotifyBtn").addEventListener("click", function () {
+  if (typeof Notification === "undefined") { showToast("مرورگرت اعلان را پشتیبانی نمی‌کند ❌"); return; }
+  if (Notification.permission === "granted") { showToast("اعلان از قبل اجازه داده شده ✅"); return; }
+  Notification.requestPermission().then(function (p) {
+    if (p === "granted") showToast("اعلان یادآورها فعال شد 🔔");
+    else showToast("اجازه‌ی اعلان داده نشد 😕");
+  }).catch(function () { showToast("درخواست اجازه ناموفق بود"); });
+});
+
 /* ==================# پشتیبان‌گیری #================== */
 
 function exportData() {
@@ -1525,7 +1770,8 @@ function importData(file) {
         history: (data.history && typeof data.history === "object") ? data.history : {},
         birthdays: Array.isArray(data.birthdays) ? data.birthdays : [],
         brain: Array.isArray(data.brain) ? data.brain : [],
-        notes: (data.notes && typeof data.notes === "object") ? data.notes : {}
+        notes: (data.notes && typeof data.notes === "object") ? data.notes : {},
+        reminders: Array.isArray(data.reminders) ? data.reminders : []
       };
 
       // ادغام کارها (بدون تکرار بر اساس id؛ اگر id نبود بر اساس عنوان)
@@ -1559,6 +1805,13 @@ function importData(file) {
         if (bb && typeof bb.id === "number" && !seenB[bb.id]) { state.birthdays.push(bb); seenB[bb.id] = true; }
       }
       if (!state.notifyOn && incoming.notifyOn) state.notifyOn = true;
+      // ادغام یادآورها
+      var seenR = {};
+      for (var ri0 = 0; ri0 < state.reminders.length; ri0++) seenR[state.reminders[ri0].id] = true;
+      for (var rj = 0; rj < incoming.reminders.length; rj++) {
+        var rr0 = incoming.reminders[rj];
+        if (rr0 && typeof rr0.id === "number" && !seenR[rr0.id]) { state.reminders.push(rr0); seenR[rr0.id] = true; }
+      }
       // پاکسازی داده‌های معیوب احتمالی
       state = sanitize(state);
       saveState();
@@ -1610,6 +1863,22 @@ function sanitize(s) {
   if (typeof s.notifyOn === "boolean") clean.notifyOn = s.notifyOn;
   if (typeof s.lastNotifyDay === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s.lastNotifyDay)) clean.lastNotifyDay = s.lastNotifyDay;
   if (s.bdaySort === "alpha") clean.bdaySort = "alpha";
+  // ⏰ یادآورها
+  clean.reminders = [];
+  if (Array.isArray(s.reminders)) {
+    var repOk = { once: 1, daily: 1, weekly: 1, yearly: 1 };
+    for (var ri = 0; ri < s.reminders.length; ri++) {
+      var rem = s.reminders[ri];
+      if (rem && typeof rem.id === "number" && typeof rem.text === "string" && rem.text.trim() &&
+          typeof rem.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(rem.date) && repOk[rem.rep]) {
+        var rr = { id: rem.id, text: rem.text.trim().slice(0, 120), date: rem.date, rep: rem.rep, time: null, lastNotified: null, ack: null };
+        if (typeof rem.time === "string" && /^\d{2}:\d{2}$/.test(rem.time)) rr.time = rem.time;
+        if (typeof rem.lastNotified === "string") rr.lastNotified = rem.lastNotified;
+        if (typeof rem.ack === "string") rr.ack = rem.ack;
+        clean.reminders.push(rr);
+      }
+    }
+  }
   // 🧠 ذهن‌خالی
   clean.brain = [];
   if (Array.isArray(s.brain)) {
@@ -1695,6 +1964,7 @@ function finishUnlock() {
   setupChips();
   renderNotifyBtn();
   maybeNotifyBirthday();
+  checkReminders();
   renderAll();
   refreshLockButtons();
   lockFailCount = 0;
@@ -1944,6 +2214,7 @@ setInterval(function () {
     renderAll();
   }
   maybeNotifyBirthday();
+  checkReminders();
 }, 30 * 1000);
 
 // شروع
@@ -1957,6 +2228,7 @@ if (bootEncrypted) {
   maybeNotifyBirthday();
   markDirty();
   renderAll();
+  checkReminders();
   refreshLockButtons();
 }
 </script>
