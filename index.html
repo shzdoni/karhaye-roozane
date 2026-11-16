@@ -346,6 +346,25 @@
   /* 📓 دفترچه‌ی عادت */
   .task-journal { background: none; border: none; font-size: .95rem; cursor: pointer; opacity: .55; padding: 2px; flex: none; }
   .task-journal.has-entry { opacity: 1; transform: scale(1.12); }
+
+  /* ⚡ جشن تیک */
+  .fx-piece { position: fixed; width: 8px; height: 8px; border-radius: 2px; pointer-events: none; z-index: 9999; animation: fxPop .8s ease-out forwards; }
+  @keyframes fxPop { from { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 1; } to { transform: translate(var(--x), var(--y)) rotate(var(--r)) scale(.4); opacity: 0; } }
+  .fx-plus { position: fixed; pointer-events: none; z-index: 9999; font-weight: bold; color: #16a34a; font-size: .95rem; animation: fxRise .9s ease-out forwards; text-shadow: 0 1px 2px #fff; }
+  @keyframes fxRise { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-46px); opacity: 0; } }
+
+  /* 🏁 چالش دوستانه */
+  .friend-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+  .friend-row { display: flex; align-items: center; gap: 8px; padding: 10px 4px; border-bottom: 1px solid var(--border); }
+  .friend-row:last-child { border-bottom: none; }
+  .friend-row.me { background: #eef2ff; border-radius: 10px; padding-left: 8px; padding-right: 8px; }
+  .friend-rank { font-size: 1.1rem; width: 30px; text-align: center; flex: none; }
+  .friend-name { font-weight: 600; font-size: .9rem; flex: 1; word-break: break-word; }
+  .friend-score { font-weight: bold; font-size: .9rem; white-space: nowrap; }
+  .friend-extra { font-size: .72rem; color: var(--muted); }
+
+  .credit { text-align: center; font-size: .78rem; color: var(--muted); margin-top: 16px; padding-bottom: 4px; line-height: 1.9; }
+  .credit b { color: var(--text); }
   #bdayForm .brow { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
   #bdayForm input, #bdayForm select { border: 2px solid var(--border); border-radius: 10px; padding: 8px 10px; font-family: inherit; font-size: .9rem; outline: none; box-sizing: border-box; }
   #bdayForm input:focus, #bdayForm select:focus { border-color: var(--primary); }
@@ -620,6 +639,18 @@
     <button class="footer-btn" id="removeLockBtn" style="display:none">🔓 برداشتن رمز</button>
     <input type="file" id="importFile" accept=".json" hidden>
   </div>
+
+  <div class="card">
+    <h2 class="section-title">🏁 چالش دوستانه</h2>
+    <p class="card-hint">کد رقابتت رو بفرست برای دوستات، کدشون رو وارد کن — امتیاز هفته‌تون کنار هم می‌شینه و رتبه می‌گیرید 🥇<br>فقط اسم و عدد رد و بدل می‌شه؛ عنوان کارهات نزد هیچ‌کس نمی‌ره! 🔒</p>
+    <div class="friend-btns">
+      <button type="button" class="footer-btn" id="friendMyCode">📤 کد رقابت من</button>
+      <button type="button" class="footer-btn" id="friendAdd">📥 کد دوست</button>
+    </div>
+    <div id="friendList" style="margin-top:10px"></div>
+  </div>
+
+  <div class="credit">⚡ این برنامه با افتخار توسط <b>مهندس رسول شیرازی</b> طراحی و توسعه یافته است</div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -810,7 +841,7 @@ var bootEncrypted = false;
   try { raw = window.localStorage.getItem(STORAGE_KEY); } catch (e) {}
   if (typeof raw === "string" && raw.indexOf("ENC1:") === 0) bootEncrypted = true;
 })();
-var state = bootEncrypted ? { tasks: [], history: {}, birthdays: [], brain: [], notes: {}, reminders: [], goals: [], pomos: {}, moods: {}, gratitude: {}, badges: {}, letters: [], challenges: [], trackers: { water: {}, book: {}, sleep: {} }, journals: {} } : loadState();
+var state = bootEncrypted ? { tasks: [], history: {}, birthdays: [], brain: [], notes: {}, reminders: [], goals: [], pomos: {}, moods: {}, gratitude: {}, badges: {}, letters: [], challenges: [], trackers: { water: {}, book: {}, sleep: {} }, journals: {}, friends: [], myName: "" } : loadState();
 
 function loadState() {
   return sanitize(storageGet() || {});
@@ -852,17 +883,85 @@ function addTask(title, due, slot) {
   return { ok: true, msg: due ? ("برای " + relLabel(due) + " (" + faDate(due) + ") ثبت شد 📅") : "اضافه شد ✅" };
 }
 
-function toggleDone(id) {
+/* ===== ⚡ بهینه‌سازی: ذخیره‌ی تأخیری + رندر سبک تیک + بازخورد مثبت ===== */
+
+var saveTimer = null;
+function scheduleSave() {
+  if (saveTimer) return;
+  saveTimer = setTimeout(function () { saveTimer = null; saveState(); }, 350);
+}
+function flushSave() {
+  if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+  saveState();
+}
+window.addEventListener("beforeunload", flushSave);
+
+// لرزش کوتاه هپتیک روی موبایل
+function haptic(ms) {
+  try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) {}
+}
+
+// 🎉 ذره‌های جشن از محل تیک + «+۱ امتیاز» شناور
+var FX_COLORS = ["#f59e0b", "#16a34a", "#3b82f6", "#8b5cf6", "#ec4899", "#f97316"];
+function celebrateAt(el) {
+  try {
+    var rect = el ? el.getBoundingClientRect() : { left: window.innerWidth / 2, top: window.innerHeight / 2, width: 0, height: 0 };
+    var cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
+    for (var i = 0; i < 12; i++) {
+      var p = document.createElement("span");
+      p.className = "fx-piece";
+      var ang = Math.random() * Math.PI * 2, dist = 40 + Math.random() * 70;
+      p.style.left = cx + "px";
+      p.style.top = cy + "px";
+      p.style.background = FX_COLORS[i % FX_COLORS.length];
+      p.style.setProperty("--x", Math.round(Math.cos(ang) * dist) + "px");
+      p.style.setProperty("--y", Math.round(Math.sin(ang) * dist - 30) + "px");
+      p.style.setProperty("--r", Math.round(Math.random() * 360 - 180) + "deg");
+      document.body.appendChild(p);
+      (function (node) { setTimeout(function () { if (node.parentNode) node.parentNode.removeChild(node); }, 850); })(p);
+    }
+    var plus = document.createElement("span");
+    plus.className = "fx-plus";
+    plus.textContent = "+۱ ⚡";
+    plus.style.left = cx + "px";
+    plus.style.top = (cy - 14) + "px";
+    document.body.appendChild(plus);
+    setTimeout(function () { if (plus.parentNode) plus.parentNode.removeChild(plus); }, 950);
+  } catch (e) {}
+}
+
+// فقط بخش‌های وابسته به تیک‌ها رندر می‌شوند (سریع‌تر از renderAll کامل)
+function renderTickViews() {
+  renderTasks();
+  renderDone();
+  renderFuture();
+  renderFocus();
+  renderStats();
+  renderLevel();
+  renderHeatmap();
+  renderWeekReview();
+  renderHabitStats();
+  renderGoals();
+  renderChallenges();
+  renderBadges();
+}
+
+function toggleDone(id, el) {
   var today = todayKey();
   if (!state.history[today]) state.history[today] = {};
   var map = state.history[today];
+  var justDone = !map[id];
   if (map[id]) delete map[id];
   else map[id] = true;
   // نقشه‌ی خالی رو نگه نمی‌داریم تا فایل تمیز بمونه
   if (Object.keys(map).length === 0) delete state.history[today];
-  saveState();
+  scheduleSave();
   markDirty();
-  renderAll();
+  renderTickViews();
+  if (justDone) {
+    haptic(25);
+    celebrateAt(el || null);
+  }
 }
 
 function removeTask(id) {
@@ -1036,6 +1135,7 @@ function renderAll() {
   renderChallenges();
   renderTrackers();
   renderBadges();
+  renderFriends();
 }
 
 // اولویت چیدمان در لیست امروز: روزانه (۰) → سررسیدِ امروز (۱) → دیرکرد (۲)؛ ستاره‌دارتر
@@ -1330,7 +1430,7 @@ function buildTaskRow(task, done, opts) {
   cb.className = "task-check";
   cb.checked = done;
   cb.setAttribute("aria-label", task.title);
-  cb.addEventListener("change", function () { toggleDone(task.id); });
+  cb.addEventListener("change", function () { toggleDone(task.id, cb); });
 
   var title = document.createElement("span");
   title.className = "task-title";
@@ -2445,9 +2545,10 @@ function moodName(v) { for (var i = 0; i < MOODS.length; i++) if (MOODS[i].v ===
 
 function setMood(v) {
   state.moods[todayKey()] = v;
-  saveState();
+  scheduleSave();
   markDirty();
   renderAll();
+  haptic(15);
   showToast("حال امروز ثبت شد " + moodEmoji(v));
 }
 
@@ -2782,9 +2883,10 @@ function setTracker(id, val, def) {
   val = Math.max(0, Math.min(def.max, val));
   if (val === 0) delete state.trackers[id][todayKey()];
   else state.trackers[id][todayKey()] = val;
-  saveState();
+  scheduleSave();
   markDirty();
   renderAll();
+  haptic(15);
   if (old < def.goal && val >= def.goal) showToast("🎉 هدفِ " + def.name + " امروز کامل شد!");
 }
 
@@ -2993,6 +3095,162 @@ function renderBadges() {
   }
 }
 
+/* ==================# 🏁 چالش دوستانه #================== */
+
+// مجموع تیک‌های این هفته (همه‌ی کارها)
+function weekTotalTicks() {
+  var ws = weekStartKey();
+  var n = 0;
+  for (var i = 0; ; i++) {
+    var key = keyDaysAgo(i);
+    if (key < ws) break;
+    var h = state.history[key];
+    if (h) for (var id in h) if (h[id] === true) n++;
+  }
+  return n;
+}
+
+function maxStreakAll() {
+  var m = 0;
+  for (var i = 0; i < state.tasks.length; i++) {
+    if (state.tasks[i].rep !== true) continue;
+    var st = taskStreak(state.tasks[i].id);
+    if (st > m) m = st;
+  }
+  return m;
+}
+
+function bestChallengeDone() {
+  var m = 0;
+  for (var i = 0; i < state.challenges.length; i++) {
+    var c = challengeDoneCount(state.challenges[i]);
+    if (c > m) m = c;
+  }
+  return m;
+}
+
+function friendCode() {
+  var me = { n: (state.myName || "من").slice(0, 30), w: weekTotalTicks(), s: maxStreakAll(), c: bestChallengeDone(), t: todayKey() };
+  return "FR1:" + btoa(unescape(encodeURIComponent(JSON.stringify(me))));
+}
+
+function parseFriendCode(code) {
+  try {
+    code = (code || "").trim();
+    if (code.indexOf("FR1:") !== 0 || code.length > 400) return null;
+    var obj = JSON.parse(decodeURIComponent(escape(atob(code.slice(4)))));
+    if (!obj || typeof obj.n !== "string" || !obj.n.trim()) return null;
+    var w = parseInt(obj.w, 10), s = parseInt(obj.s, 10), c = parseInt(obj.c, 10);
+    if (isNaN(w) || w < 0 || w > 9999 || isNaN(s) || s < 0 || s > 999 || isNaN(c) || c < 0 || c > 30) return null;
+    return { n: obj.n.trim().slice(0, 30), w: w, s: s, c: c, t: (typeof obj.t === "string" && /^\d{4}-\d{2}-\d{2}$/.test(obj.t)) ? obj.t : null };
+  } catch (e) { return null; }
+}
+
+function copyText(txt) {
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(txt).then(function () { showToast("کد کپی شد 📤 بفرستش برای دوستات!"); }, function () { showToast("کپی نشد — دستی انتخاب و کپی کن"); });
+      return;
+    }
+  } catch (e) {}
+  try {
+    var ta = document.createElement("textarea");
+    ta.value = txt;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+    showToast("کد کپی شد 📤 بفرستش برای دوستات!");
+  } catch (e) {
+    showToast("کپی نشد — دستی انتخاب و کپی کن");
+  }
+}
+
+function renderFriends() {
+  var list = $("friendList");
+  if (!list) return;
+  list.textContent = "";
+
+  // ردیف من (زنده)
+  var meW = weekTotalTicks(), meS = maxStreakAll();
+  var all = [{ me: true, n: state.myName || "من", w: meW, s: meS }];
+  for (var i = 0; i < state.friends.length; i++) all.push(state.friends[i]);
+  all.sort(function (a, b) { return b.w - a.w; });
+
+  var medals = ["🥇", "🥈", "🥉"];
+  for (var r = 0; r < all.length; r++) {
+    var f = all[r];
+    var row = document.createElement("div");
+    row.className = "friend-row" + (f.me ? " me" : "");
+
+    var rank = document.createElement("span");
+    rank.className = "friend-rank";
+    rank.textContent = medals[r] || toFa(r + 1);
+
+    var name = document.createElement("span");
+    name.className = "friend-name";
+    name.textContent = f.n + (f.me ? " (تو)" : "");
+
+    var score = document.createElement("span");
+    score.className = "friend-score";
+    score.textContent = toFa(f.w) + " امتیاز";
+
+    row.appendChild(rank);
+    row.appendChild(name);
+    row.appendChild(score);
+    if (f.s > 0) {
+      var extra = document.createElement("span");
+      extra.className = "friend-extra";
+      extra.textContent = "🔥 " + toFa(f.s);
+      row.appendChild(extra);
+    }
+    if (!f.me) {
+      var del = document.createElement("button");
+      del.className = "task-delete";
+      del.type = "button";
+      del.title = "حذف دوست";
+      del.textContent = "🗑️";
+      del.addEventListener("click", function (fid) { return function () {
+        state.friends = state.friends.filter(function (x) { return x.id !== fid; });
+        saveState(); markDirty(); renderAll(); showToast("دوست پاک شد 🗑️");
+      }; }(f.id));
+      row.appendChild(del);
+    }
+    list.appendChild(row);
+  }
+  if (state.friends.length === 0) {
+    var e = document.createElement("div");
+    e.className = "empty-msg";
+    e.textContent = "هنوز کسی نیست! «📤 کد رقابت من» رو بزن و توی گروه دوستات بفرست 🏁";
+    list.appendChild(e);
+  }
+}
+
+$("friendMyCode").addEventListener("click", function () {
+  if (!state.myName) {
+    var nm = window.prompt("اسمت چی باشه تو جدول رقابت؟", "");
+    if (nm === null) return;
+    state.myName = (nm || "").trim().slice(0, 30) || "من";
+    saveState();
+  }
+  copyText(friendCode());
+  renderAll();
+});
+
+$("friendAdd").addEventListener("click", function () {
+  var code = window.prompt("کد رقابت دوستت رو اینجا بچسبون (با FR1: شروع می‌شه):", "");
+  if (code === null) return;
+  var f = parseFriendCode(code);
+  if (!f) { showToast("کد معتبر نیست ❌"); return; }
+  var id = Date.now();
+  while (state.friends.some(function (x) { return x.id === id; })) id += 1;
+  state.friends.push({ id: id, n: f.n, w: f.w, s: f.s, c: f.c, t: f.t });
+  saveState();
+  markDirty();
+  renderAll();
+  showToast(f.n + " به رقابت اضافه شد 🏁");
+});
+
 /* ==================# پشتیبان‌گیری #================== */
 
 function exportData() {
@@ -3044,7 +3302,9 @@ function importData(file) {
         letters: Array.isArray(data.letters) ? data.letters : [],
         challenges: Array.isArray(data.challenges) ? data.challenges : [],
         trackers: (data.trackers && typeof data.trackers === "object") ? data.trackers : {},
-        journals: (data.journals && typeof data.journals === "object") ? data.journals : {}
+        journals: (data.journals && typeof data.journals === "object") ? data.journals : {},
+        friends: Array.isArray(data.friends) ? data.friends : [],
+        myName: (typeof data.myName === "string") ? data.myName : ""
       };
 
       // ادغام کارها (بدون تکرار بر اساس id؛ اگر id نبود بر اساس عنوان)
@@ -3141,6 +3401,14 @@ function importData(file) {
           if (!state.journals[ijk][ijkd]) state.journals[ijk][ijkd] = incoming.journals[ijk][ijkd];
         }
       }
+      // 🏁 ادغام دوست‌ها + اسم من
+      var seenF = {};
+      for (var fi0 = 0; fi0 < state.friends.length; fi0++) seenF[state.friends[fi0].id] = true;
+      for (var fj = 0; fj < incoming.friends.length; fj++) {
+        var FR = incoming.friends[fj];
+        if (FR && typeof FR.id === "number" && !seenF[FR.id]) { state.friends.push(FR); seenF[FR.id] = true; }
+      }
+      if (!state.myName && incoming.myName) state.myName = incoming.myName;
       // پاکسازی داده‌های معیوب احتمالی
       state = sanitize(state);
       saveState();
@@ -3322,6 +3590,18 @@ function sanitize(s) {
       if (Object.keys(jday).length) clean.journals[jk] = jday;
     }
   }
+  // 🏁 دوست‌های رقابت
+  clean.friends = [];
+  if (Array.isArray(s.friends)) {
+    for (var fi = 0; fi < s.friends.length; fi++) {
+      var fr = s.friends[fi];
+      if (fr && typeof fr.id === "number" && typeof fr.n === "string" && fr.n.trim() && fr.n.length <= 30 &&
+          typeof fr.w === "number" && fr.w >= 0 && fr.w <= 9999 && typeof fr.s === "number" && fr.s >= 0 && fr.s <= 999) {
+        clean.friends.push({ id: fr.id, n: fr.n.trim(), w: fr.w, s: fr.s, c: (typeof fr.c === "number" && fr.c >= 0 && fr.c <= 30) ? fr.c : 0, t: (typeof fr.t === "string" && /^\d{4}-\d{2}-\d{2}$/.test(fr.t)) ? fr.t : null });
+      }
+    }
+  }
+  if (typeof s.myName === "string" && s.myName.trim() && s.myName.length <= 30) clean.myName = s.myName.trim();
   markDirty();
   return clean;
 }
@@ -3446,6 +3726,7 @@ function enableLock(pin) {
     showToast("مرورگرت رمزنگاری را پشتیبانی نمی‌کند ❌");
     return;
   }
+  flushSave(); // ذخیره‌ی تأخیری معلق را تمام کن تا بعد از رمزنگاری بازنویسی نشود
   var saltB = crypto.getRandomValues(new Uint8Array(16));
   deriveKey(pin, saltB).then(function (k) {
     lockState.enabled = true;
