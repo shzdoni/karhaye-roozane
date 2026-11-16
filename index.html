@@ -51,6 +51,7 @@
   .add-form { display: flex; gap: 8px; }
   .add-form input {
     flex: 1;
+    min-width: 0;
     border: 2px solid var(--border);
     border-radius: 10px;
     padding: 10px 12px;
@@ -73,6 +74,23 @@
     transition: background .2s;
   }
   .add-form button:hover { background: #4338ca; }
+  /* فرم افزودن کار: ورودی کامل پهنا، بعد ردیفِ ثابتِ انتخاب+دکمه */
+  #addForm { flex-direction: column; }
+  .add-actions { display: flex; gap: 8px; }
+  .add-actions select {
+    flex: 1 1 60%;
+    min-width: 0;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 10px;
+    font-size: .95rem;
+    font-family: inherit;
+    background: #fff;
+    outline: none;
+    transition: border-color .2s;
+  }
+  .add-actions select:focus { border-color: var(--primary); }
+  .add-actions button { flex: 1 1 40%; padding: 10px 8px; }
 
   /* ---------- نوار پیشرفت ---------- */
   .progress-row { display: flex; align-items: center; gap: 10px; }
@@ -340,8 +358,6 @@
   /* 🌅🌙 روتین */
   .routine-head { font-size: .8rem; font-weight: bold; color: var(--muted); margin: 12px 4px 4px; }
   .routine-head:first-child { margin-top: 2px; }
-  #slotSelect { flex: none; border: 2px solid var(--border); border-radius: 10px; padding: 8px 8px; font-family: inherit; font-size: .88rem; background: #fff; outline: none; box-sizing: border-box; }
-  #slotSelect:focus { border-color: var(--primary); }
 
   /* 📓 دفترچه‌ی عادت */
   .task-journal { background: none; border: none; font-size: .95rem; cursor: pointer; opacity: .55; padding: 2px; flex: none; }
@@ -365,6 +381,22 @@
 
   .credit { text-align: center; font-size: .78rem; color: var(--muted); margin-top: 16px; padding-bottom: 4px; line-height: 1.9; }
   .credit b { color: var(--text); }
+  .credit a { color: var(--primary); font-weight: bold; text-decoration: none; }
+
+  /* 🌐 چالش مشترک لایو */
+  .live-dot { font-size: .8rem; }
+  .live-step { font-size: .82rem; color: var(--muted); line-height: 2; margin-bottom: 8px; }
+  .live-step b { color: var(--text); }
+  .live-setup-row { display: flex; gap: 8px; }
+  #liveUrlInput { flex: 1; min-width: 0; border: 2px solid var(--border); border-radius: 10px; padding: 10px 10px; font-family: inherit; font-size: .85rem; outline: none; direction: ltr; text-align: left; box-sizing: border-box; }
+  #liveUrlInput:focus { border-color: var(--primary); }
+  #liveUrlSave { background: var(--primary); color: #fff; border: none; border-radius: 10px; padding: 10px 14px; font-family: inherit; font-size: .9rem; cursor: pointer; flex: none; white-space: nowrap; }
+  .live-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+  .live-title-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .live-goal { font-weight: bold; font-size: .95rem; flex: 1; word-break: break-word; }
+  .live-sync { font-size: .7rem; color: var(--muted); white-space: nowrap; }
+  .live-member.offline .friend-name::after { content: " ⏸"; font-size: .7rem; color: var(--muted); }
+  .live-edit { background: none; border: none; cursor: pointer; font-size: .9rem; opacity: .6; flex: none; }
   #bdayForm .brow { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
   #bdayForm input, #bdayForm select { border: 2px solid var(--border); border-radius: 10px; padding: 8px 10px; font-family: inherit; font-size: .9rem; outline: none; box-sizing: border-box; }
   #bdayForm input:focus, #bdayForm select:focus { border-color: var(--primary); }
@@ -429,12 +461,14 @@
   <div class="card">
     <form class="add-form" id="addForm" aria-label="افزودن کار جدید">
       <input type="text" id="taskInput" placeholder="مثلاً: ۳۰ دقیقه ورزش کنم…" maxlength="80" autocomplete="off">
-      <select id="slotSelect" aria-label="زمان انجام" title="این کار همیشه صبح یا شب انجام می‌شه؟">
-        <option value="">☀️ همه‌ی روز</option>
-        <option value="am">🌅 صبح</option>
-        <option value="pm">🌙 شب</option>
-      </select>
-      <button type="submit">➕ اضافه کن</button>
+      <div class="add-actions">
+        <select id="slotSelect" aria-label="زمان انجام" title="این کار همیشه صبح یا شب انجام می‌شه؟">
+          <option value="">☀️ همه‌ی روز</option>
+          <option value="am">🌅 صبح</option>
+          <option value="pm">🌙 شب</option>
+        </select>
+        <button type="submit">➕ اضافه کن</button>
+      </div>
     </form>
     <div class="chip-row" aria-label="برای چه روزی؟">
       <button type="button" class="chip active" data-mode="today">امروز</button>
@@ -650,7 +684,14 @@
     <div id="friendList" style="margin-top:10px"></div>
   </div>
 
-  <div class="credit">⚡ این برنامه با افتخار توسط <b>مهندس رسول شیرازی</b> طراحی و توسعه یافته است</div>
+  <div class="card">
+    <h2 class="section-title">🌐 چالش مشترک لایو <span id="liveDot" style="display:none"></span></h2>
+    <p class="card-hint">جدای از بخش شخصی — یه هدف مشترک که همه‌ی اعضا ببینن؛ امتیازها خودکار و زنده آپدیت می‌شن 🔄</p>
+    <div id="liveSetup"></div>
+    <div id="liveMain"></div>
+  </div>
+
+  <div class="credit">⚡ این برنامه با افتخار توسط <b>مهندس رسول شیرازی</b> طراحی و توسعه یافته است<br>💬 تلگرام: <a href="https://t.me/sHZdONI" dir="ltr" target="_blank" rel="noopener">@sHZdONI</a></div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -1136,6 +1177,7 @@ function renderAll() {
   renderTrackers();
   renderBadges();
   renderFriends();
+  renderLive();
 }
 
 // اولویت چیدمان در لیست امروز: روزانه (۰) → سررسیدِ امروز (۱) → دیرکرد (۲)؛ ستاره‌دارتر
@@ -3251,6 +3293,305 @@ $("friendAdd").addEventListener("click", function () {
   showToast(f.n + " به رقابت اضافه شد 🏁");
 });
 
+/* ==================# 🌐 چالش مشترک لایو (سینک زنده) #================== */
+
+// تنظیمات اجتماعی جدا از داده‌ی شخصی؛ در حافظه‌ی محلی نگه داشته می‌شود
+var SOCIAL_KEY = "dailyTasksApp_social";
+
+function loadSocial() {
+  var d = { dbUrl: "", myName: "", myId: null, room: null };
+  try {
+    var raw = window.localStorage.getItem(SOCIAL_KEY);
+    if (raw) {
+      var o = JSON.parse(raw);
+      if (o && typeof o === "object") {
+        if (typeof o.dbUrl === "string" && /^https:\/\/.+/.test(o.dbUrl)) d.dbUrl = o.dbUrl;
+        if (typeof o.myName === "string") d.myName = o.myName.slice(0, 30);
+        if (typeof o.myId === "string" && /^[A-Za-z0-9]{6,20}$/.test(o.myId)) d.myId = o.myId;
+        if (o.room && typeof o.room === "object" && typeof o.room.code === "string" && /^[A-Z0-9]{6}$/.test(o.room.code)) d.room = { code: o.room.code, t: typeof o.room.t === "string" ? o.room.t.slice(0, 60) : "" };
+      }
+    }
+  } catch (e) {}
+  if (!d.myId) d.myId = "m" + Math.random().toString(36).slice(2, 10);
+  return d;
+}
+
+var social = loadSocial();
+
+function saveSocial() {
+  try { window.localStorage.setItem(SOCIAL_KEY, JSON.stringify(social)); } catch (e) {}
+}
+
+var liveData = null;
+var liveLastOk = null;
+var liveTimer = null;
+
+function liveBase() {
+  return social.dbUrl.replace(/\/+$/, "") + "/rooms/" + social.room.code;
+}
+
+function liveStopPolling() {
+  if (liveTimer) { clearInterval(liveTimer); liveTimer = null; }
+}
+
+function liveStartPolling() {
+  if (liveTimer) return;
+  liveTimer = setInterval(livePoll, 15000);
+  livePoll();
+}
+
+function livePoll() {
+  if (!social.room || !social.dbUrl) { liveStopPolling(); return; }
+  var me = { n: social.myName || "من", w: weekTotalTicks(), s: maxStreakAll(), u: Date.now() };
+  // اول نوشتن امتیاز من، بعد خواندن کل اتاق
+  fetch(liveBase() + "/members/" + social.myId + ".json", { method: "PUT", body: JSON.stringify(me) })
+    .then(function (r) { if (!r.ok) throw new Error("w" + r.status); return fetch(liveBase() + ".json"); })
+    .then(function (r2) { if (!r2.ok) throw new Error("r" + r2.status); return r2.json(); })
+    .then(function (data) {
+      if (!data || !data.t) {
+        social.room = null;
+        saveSocial();
+        liveStopPolling();
+        renderAll();
+        showToast("اتاق موجود نیست — شاید حذف شده باشد");
+        return;
+      }
+      social.room.t = String(data.t).slice(0, 60);
+      liveData = data;
+      liveLastOk = Date.now();
+      liveDot(true);
+      renderLive();
+    })
+    .catch(function () {
+      liveDot(false);
+    });
+}
+
+function liveDot(ok) {
+  var d = $("liveDot");
+  if (!d) return;
+  d.style.display = "inline";
+  d.textContent = ok ? "🟢" : "🔴";
+  d.title = ok ? ("آخرین همگام‌سازی: " + new Date(liveLastOk).toLocaleTimeString("fa-IR")) : "اتصال برقرار نشد — دوباره تلاش می‌کنیم";
+}
+
+function liveAskName() {
+  if (social.myName) return true;
+  var nm = window.prompt("اسمت چی باشه توی چالش مشترک؟", "");
+  if (nm === null) return false;
+  social.myName = (nm || "").trim().slice(0, 30) || "من";
+  saveSocial();
+  return true;
+}
+
+function renderLive() {
+  var setup = $("liveSetup"), main = $("liveMain");
+  if (!setup) return;
+  setup.textContent = "";
+  main.textContent = "";
+
+  if (!social.dbUrl) {
+    var steps = document.createElement("div");
+    steps.className = "live-step";
+    steps.textContent = "برای رقابتِ زنده یک‌بار (رایگان) Firebase بساز — ۲ دقیقه، راهنمای قدم‌به‌قدم پایین صفحه (بخش 🌐). بعد آدرس دیتابیست را اینجا بچسبان:";
+    setup.appendChild(steps);
+    var row = document.createElement("div");
+    row.className = "live-setup-row";
+    var inp = document.createElement("input");
+    inp.id = "liveUrlInput";
+    inp.type = "text";
+    inp.placeholder = "https://نام-پروژه-default-rtdb.firebaseio.com";
+    inp.value = "";
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.id = "liveUrlSave";
+    btn.textContent = "✅ اتصال";
+    btn.addEventListener("click", function () {
+      var v = (inp.value || "").trim();
+      if (!/^https:\/\/[a-z0-9-]+[a-z0-9.-]*(firebaseio\.com|firebasedatabase\.app)(\/)?$/.test(v)) {
+        showToast("آدرس معتبر نیست — مثل نمونه کامل باشد");
+        return;
+      }
+      social.dbUrl = v.replace(/\/+$/, "");
+      saveSocial();
+      renderAll();
+      showToast("اتصال ثبت شد 🌐 حالا اتاق بساز یا وارد شو");
+    });
+    row.appendChild(inp);
+    row.appendChild(btn);
+    setup.appendChild(row);
+    return;
+  }
+
+  if (!social.room) {
+    var btns = document.createElement("div");
+    btns.className = "live-btns";
+    var b1 = document.createElement("button");
+    b1.type = "button";
+    b1.className = "footer-btn";
+    b1.textContent = "🆕 ساخت اتاق رقابت";
+    b1.addEventListener("click", function () {
+      if (!liveAskName()) return;
+      var goal = window.prompt("هدف مشترک چی باشه؟ (مثلاً: چالش ورزش)", "چالش ورزش");
+      if (goal === null) return;
+      goal = (goal || "").trim().slice(0, 60) || "چالش مشترک";
+      var chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      var code = "";
+      for (var i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+      var url = social.dbUrl.replace(/\/+$/, "") + "/rooms/" + code + ".json";
+      fetch(url).then(function (r) { return r.json(); }).then(function (exists) {
+        if (exists) { showToast("کد تصادفی تکراری شد — دوباره امتحان کن"); return; }
+        return fetch(url, { method: "PUT", body: JSON.stringify({ t: goal, c: Date.now() }) }).then(function (r) {
+          if (!r.ok) throw new Error("c");
+          social.room = { code: code, t: goal };
+          saveSocial();
+          liveStartPolling();
+          renderAll();
+          copyText("کد اتاق: " + code + "\nبرنامه: https://shzdoni.github.io/karhaye-roozane/");
+        });
+      }).catch(function () { showToast("ساخت اتاق ناموفق — اینترنت را چک کن ❌"); });
+    });
+    var b2 = document.createElement("button");
+    b2.type = "button";
+    b2.className = "footer-btn";
+    b2.textContent = "🔑 ورود با کد اتاق";
+    b2.addEventListener("click", function () {
+      if (!liveAskName()) return;
+      var code = (window.prompt("کد ۶ حرفی اتاق را وارد کن:", "") || "").trim().toUpperCase();
+      if (!/^[A-Z0-9]{6}$/.test(code)) { showToast("کد باید ۶ حرف/عدد باشد"); return; }
+      var url = social.dbUrl.replace(/\/+$/, "") + "/rooms/" + code + ".json";
+      fetch(url).then(function (r) { return r.json(); }).then(function (data) {
+        if (!data || !data.t) { showToast("چنین اتاقی پیدا نشد ❌"); return; }
+        social.room = { code: code, t: String(data.t).slice(0, 60) };
+        saveSocial();
+        liveStartPolling();
+        renderAll();
+        showToast("به «" + social.room.t + "» وصل شدی! 🌐");
+      }).catch(function () { showToast("اتصال ناموفق — اینترنت را چک کن ❌"); });
+    });
+    var b3 = document.createElement("button");
+    b3.type = "button";
+    b3.className = "footer-btn";
+    b3.textContent = "⚙️ تغییر آدرس اتصال";
+    b3.addEventListener("click", function () {
+      if (!window.confirm("آدرس اتصال پاک شود؟")) return;
+      social.dbUrl = "";
+      social.room = null;
+      saveSocial();
+      liveStopPolling();
+      liveData = null;
+      renderAll();
+    });
+    btns.appendChild(b1);
+    btns.appendChild(b2);
+    btns.appendChild(b3);
+    main.appendChild(btns);
+    return;
+  }
+
+  // ===== داخل اتاق =====
+  var titleRow = document.createElement("div");
+  titleRow.className = "live-title-row";
+  var goal = document.createElement("span");
+  goal.className = "live-goal";
+  goal.textContent = "🎯 " + social.room.t;
+  var edit = document.createElement("button");
+  edit.type = "button";
+  edit.className = "live-edit";
+  edit.title = "تغییر هدف مشترک";
+  edit.textContent = "✏️";
+  edit.addEventListener("click", function () {
+    var nt = window.prompt("هدف مشترک جدید:", social.room.t);
+    if (nt === null) return;
+    nt = (nt || "").trim().slice(0, 60);
+    if (!nt) return;
+    social.room.t = nt;
+    saveSocial();
+    fetch(liveBase() + "/t.json", { method: "PUT", body: JSON.stringify(nt) }).catch(function () {});
+    renderAll();
+  });
+  titleRow.appendChild(goal);
+  titleRow.appendChild(edit);
+  main.appendChild(titleRow);
+
+  var sync = document.createElement("div");
+  sync.className = "live-sync";
+  sync.textContent = liveLastOk ? ("🔄 آخرین به‌روزرسانی: " + new Date(liveLastOk).toLocaleTimeString("fa-IR") + " (هر ۱۵ ثانیه)") : "در حال همگام‌سازی…";
+  main.appendChild(sync);
+
+  var list = document.createElement("div");
+  list.style.marginTop = "8px";
+  var members = [];
+  if (liveData && liveData.members && typeof liveData.members === "object") {
+    for (var mk in liveData.members) {
+      var mv = liveData.members[mk];
+      if (mv && typeof mv.n === "string" && typeof mv.w === "number" && mv.w >= 0) {
+        members.push({ id: mk, n: String(mv.n).slice(0, 30), w: mv.w, s: (typeof mv.s === "number" ? mv.s : 0), u: (typeof mv.u === "number" ? mv.u : 0) });
+      }
+    }
+  }
+  // من همیشه حاضر است (حتی قبل از اولین سینک)
+  if (!members.some(function (m) { return m.id === social.myId; })) {
+    members.push({ id: social.myId, n: social.myName || "من", w: weekTotalTicks(), s: maxStreakAll(), u: Date.now() });
+  }
+  members.sort(function (a, b) { return b.w - a.w; });
+
+  var medals = ["🥇", "🥈", "🥉"];
+  var now = Date.now();
+  for (var i = 0; i < members.length; i++) {
+    var m = members[i];
+    var row = document.createElement("div");
+    row.className = "friend-row" + (m.id === social.myId ? " me" : "") + (m.u && (now - m.u) > 10 * 60000 ? " offline" : "");
+    var rank = document.createElement("span");
+    rank.className = "friend-rank";
+    rank.textContent = medals[i] || toFa(i + 1);
+    var name = document.createElement("span");
+    name.className = "friend-name";
+    name.textContent = m.n + (m.id === social.myId ? " (تو)" : "");
+    var score = document.createElement("span");
+    score.className = "friend-score";
+    score.textContent = toFa(m.w) + " امتیاز";
+    row.appendChild(rank);
+    row.appendChild(name);
+    row.appendChild(score);
+    if (m.s > 0) {
+      var ex = document.createElement("span");
+      ex.className = "friend-extra";
+      ex.textContent = "🔥 " + toFa(m.s);
+      row.appendChild(ex);
+    }
+    list.appendChild(row);
+  }
+  main.appendChild(list);
+
+  var btns2 = document.createElement("div");
+  btns2.className = "live-btns";
+  var bc = document.createElement("button");
+  bc.type = "button";
+  bc.className = "footer-btn";
+  bc.textContent = "📤 کد اتاق: " + social.room.code;
+  bc.addEventListener("click", function () {
+    copyText("کد اتاق: " + social.room.code + "\nبرنامه: https://shzdoni.github.io/karhaye-roozane/\nهدف مشترک: " + social.room.t);
+  });
+  var bl = document.createElement("button");
+  bl.type = "button";
+  bl.className = "footer-btn";
+  bl.textContent = "🚪 خروج از اتاق";
+  bl.addEventListener("click", function () {
+    if (!window.confirm("از اتاق خارج می‌شوی؟ امتیازت از جدول حذف می‌شود.")) return;
+    fetch(liveBase() + "/members/" + social.myId + ".json", { method: "DELETE" }).catch(function () {});
+    social.room = null;
+    saveSocial();
+    liveStopPolling();
+    liveData = null;
+    renderAll();
+    showToast("از اتاق خارج شدی 🚪");
+  });
+  btns2.appendChild(bc);
+  btns2.appendChild(bl);
+  main.appendChild(btns2);
+}
+
 /* ==================# پشتیبان‌گیری #================== */
 
 function exportData() {
@@ -3936,6 +4277,7 @@ if (bootEncrypted) {
   renderAll();
   checkReminders();
   refreshLockButtons();
+  if (social.room && social.dbUrl) liveStartPolling();
 }
 </script>
 </body>
