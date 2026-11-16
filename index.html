@@ -251,6 +251,101 @@
   #pomoStart:hover { background: #c2410c; }
   #pomoReset { background: #fff; color: var(--muted); border: 2px solid var(--border); border-radius: 10px; padding: 10px 16px; font-family: inherit; font-size: .9rem; cursor: pointer; }
   .pomo-today { font-size: .82rem; color: var(--muted); margin-top: 10px; }
+
+  /* 🌡️ حال روز */
+  .mood-row { display: flex; gap: 8px; justify-content: space-between; }
+  .mood-btn { flex: 1; border: 2px solid var(--border); background: #fff; border-radius: 14px; padding: 10px 4px 8px; font-family: inherit; font-size: 1.5rem; cursor: pointer; transition: transform .1s, border-color .2s; }
+  .mood-btn small { display: block; font-size: .7rem; color: var(--muted); margin-top: 2px; }
+  .mood-btn:hover { transform: scale(1.06); }
+  .mood-btn.mood-selected { border-color: var(--primary); background: #eef2ff; transform: scale(1.06); }
+  .mood-trend { display: flex; gap: 4px; margin-top: 10px; justify-content: center; font-size: 1rem; }
+  .mood-trend span { width: 22px; text-align: center; }
+
+  /* 🏃 چالش ۳۰ روزه */
+  .chal-row { padding: 10px 4px; border-bottom: 1px solid var(--border); }
+  .chal-row:last-child { border-bottom: none; }
+  .chal-title { font-weight: 600; font-size: .92rem; word-break: break-word; }
+  .chal-sub { font-size: .78rem; color: var(--muted); margin: 2px 0 8px; }
+  .chal-grid { display: flex; flex-wrap: wrap; gap: 4px; }
+  .chal-cell { width: 22px; height: 22px; border-radius: 6px; background: #f3f4f6; border: 1px dashed var(--border); box-sizing: border-box; }
+  .chal-cell.cc-done { background: #16a34a; border: none; }
+  .chal-cell.cc-miss { background: #fee2e2; border: none; }
+  .chal-btns { display: flex; gap: 8px; margin-top: 8px; align-items: center; }
+  .chal-msg { font-size: .85rem; font-weight: bold; }
+  .chal-msg.ok { color: #16a34a; }
+  .chal-msg.bad { color: #dc2626; }
+  #chalTask { flex: 1; min-width: 140px; }
+  #chalSubmit { background: var(--primary); color: #fff; border: none; border-radius: 10px; padding: 8px 12px; font-family: inherit; font-size: .9rem; cursor: pointer; flex: none; }
+
+  /* 💧 پیگیری سریع */
+  .tr-row { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .tr-row:last-child { border-bottom: none; }
+  .tr-name { font-size: .88rem; font-weight: 600; white-space: nowrap; min-width: 84px; }
+  .tr-main { flex: 1; min-width: 0; }
+  .tr-track { height: 8px; background: #e5e7eb; border-radius: 999px; overflow: hidden; }
+  .tr-fill { height: 100%; border-radius: 999px; transition: width .3s; background: linear-gradient(90deg, #0ea5e9, #38bdf8); }
+  .tr-fill.full { background: linear-gradient(90deg, #16a34a, #4ade80); }
+  .tr-val { font-size: .74rem; color: var(--muted); margin-top: 3px; }
+  .tr-btn { background: var(--primary); color: #fff; border: none; border-radius: 10px; width: 36px; height: 34px; font-size: 1rem; cursor: pointer; flex: none; }
+  .tr-btn.minus { background: #fff; color: var(--muted); border: 2px solid var(--border); }
+  .tr-sleep input { width: 74px; flex: none; border: 2px solid var(--border); border-radius: 10px; padding: 7px 8px; font-family: inherit; font-size: .85rem; box-sizing: border-box; outline: none; text-align: center; }
+  .tr-sleep input:focus { border-color: var(--primary); }
+  .tr-sleep .tr-fill { background: linear-gradient(90deg, #8b5cf6, #c4b5fd); }
+
+  /* 📈 آمار عادت‌ها */
+  .hs-row { padding: 9px 2px; border-bottom: 1px dashed var(--border); }
+  .hs-row:last-child { border-bottom: none; }
+  .hs-top { display: flex; justify-content: space-between; gap: 8px; font-size: .88rem; }
+  .hs-name { font-weight: 600; word-break: break-word; }
+  .hs-pct { color: var(--muted); font-size: .78rem; white-space: nowrap; }
+  .hs-track { height: 7px; background: #e5e7eb; border-radius: 999px; overflow: hidden; margin-top: 5px; }
+  .hs-fill { height: 100%; background: linear-gradient(90deg, var(--primary), #4ade80); border-radius: 999px; }
+
+  /* 🏅 نشان‌ها */
+  .badge-count { font-size: .75rem; color: var(--muted); font-weight: normal; }
+  .badge-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(74px, 1fr)); gap: 8px; }
+  .badge-cell { text-align: center; border: 2px solid var(--border); border-radius: 12px; padding: 8px 2px 6px; background: #fff; }
+  .badge-cell .bi { font-size: 1.5rem; }
+  .badge-cell .bn { font-size: .68rem; font-weight: bold; margin-top: 2px; }
+  .badge-cell .bh { font-size: .6rem; color: var(--muted); margin-top: 1px; line-height: 1.4; }
+  .badge-cell.unlocked { border-color: #f59e0b; background: #fffbeb; }
+  .badge-cell.locked { opacity: .55; filter: grayscale(.9); }
+
+  /* 🙏 شکرگزاری */
+  .grat-inputs { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+  .grat-inputs input { border: 2px solid var(--border); border-radius: 10px; padding: 9px 10px; font-family: inherit; font-size: .9rem; outline: none; box-sizing: border-box; }
+  .grat-inputs input:focus { border-color: var(--primary); }
+  #gratSubmit { background: var(--primary); color: #fff; border: none; border-radius: 10px; padding: 9px 14px; font-family: inherit; font-size: .9rem; cursor: pointer; width: 100%; }
+  .grat-row { padding: 8px 2px; border-bottom: 1px dashed var(--border); font-size: .86rem; line-height: 1.9; }
+  .grat-row:last-child { border-bottom: none; }
+  .grat-when { font-size: .74rem; color: var(--muted); }
+
+  /* 💌 نامه به آینده */
+  .card-hint { font-size: .8rem; color: var(--muted); margin: -4px 0 8px; }
+  #letterText { width: 100%; box-sizing: border-box; border: 2px solid var(--border); border-radius: 10px; padding: 9px 10px; font-family: inherit; font-size: .9rem; outline: none; resize: vertical; }
+  #letterText:focus { border-color: var(--primary); }
+  .letter-date-label { font-size: .82rem; color: var(--muted); white-space: nowrap; }
+  #letterDate { flex: 1; min-width: 0; border: 2px solid var(--border); border-radius: 10px; padding: 7px 8px; font-family: inherit; font-size: .85rem; outline: none; box-sizing: border-box; }
+  #letterDate:focus { border-color: var(--primary); }
+  #letterSubmit { background: var(--primary); color: #fff; border: none; border-radius: 10px; padding: 8px 12px; font-family: inherit; font-size: .85rem; cursor: pointer; flex: none; }
+  .letter-row { padding: 10px 4px; border-bottom: 1px solid var(--border); }
+  .letter-row:last-child { border-bottom: none; }
+  .letter-seal { font-size: .88rem; font-weight: bold; color: #92400e; }
+  .letter-meta { font-size: .74rem; color: var(--muted); margin-top: 2px; }
+  .letter-text { font-size: .88rem; line-height: 1.9; margin-top: 6px; white-space: pre-wrap; word-break: break-word; }
+  .letter-banner { background: #fef3c7; border: 2px solid #f59e0b; border-radius: 14px; padding: 12px 14px; margin-bottom: 12px; }
+  .letter-banner .lb-title { font-weight: bold; font-size: .95rem; margin-bottom: 6px; }
+  .letter-banner .lb-btn { background: #92400e; color: #fff; border: none; border-radius: 10px; padding: 7px 14px; font-family: inherit; font-size: .85rem; cursor: pointer; margin-top: 8px; }
+
+  /* 🌅🌙 روتین */
+  .routine-head { font-size: .8rem; font-weight: bold; color: var(--muted); margin: 12px 4px 4px; }
+  .routine-head:first-child { margin-top: 2px; }
+  #slotSelect { flex: none; border: 2px solid var(--border); border-radius: 10px; padding: 8px 8px; font-family: inherit; font-size: .88rem; background: #fff; outline: none; box-sizing: border-box; }
+  #slotSelect:focus { border-color: var(--primary); }
+
+  /* 📓 دفترچه‌ی عادت */
+  .task-journal { background: none; border: none; font-size: .95rem; cursor: pointer; opacity: .55; padding: 2px; flex: none; }
+  .task-journal.has-entry { opacity: 1; transform: scale(1.12); }
   #bdayForm .brow { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
   #bdayForm input, #bdayForm select { border: 2px solid var(--border); border-radius: 10px; padding: 8px 10px; font-family: inherit; font-size: .9rem; outline: none; box-sizing: border-box; }
   #bdayForm input:focus, #bdayForm select:focus { border-color: var(--primary); }
@@ -306,9 +401,20 @@
     <div id="quoteLine" class="quote-line"></div>
   </header>
 
+  <div class="card mood-card">
+    <h2 class="section-title">🌡️ امروز چه‌حالی؟</h2>
+    <div class="mood-row" id="moodRow"></div>
+    <div class="mood-trend" id="moodTrend"></div>
+  </div>
+
   <div class="card">
     <form class="add-form" id="addForm" aria-label="افزودن کار جدید">
       <input type="text" id="taskInput" placeholder="مثلاً: ۳۰ دقیقه ورزش کنم…" maxlength="80" autocomplete="off">
+      <select id="slotSelect" aria-label="زمان انجام" title="این کار همیشه صبح یا شب انجام می‌شه؟">
+        <option value="">☀️ همه‌ی روز</option>
+        <option value="am">🌅 صبح</option>
+        <option value="pm">🌙 شب</option>
+      </select>
       <button type="submit">➕ اضافه کن</button>
     </form>
     <div class="chip-row" aria-label="برای چه روزی؟">
@@ -372,6 +478,31 @@
   </div>
 
   <div class="card">
+    <h2 class="section-title">🏃 چالش ۳۰ روزه</h2>
+    <form id="chalForm">
+      <div class="brow">
+        <select id="chalTask" aria-label="انتخاب کار برای چالش"></select>
+        <button type="submit" id="chalSubmit">🚀 شروع چالش</button>
+      </div>
+    </form>
+    <div id="chalList" style="margin-top:10px"></div>
+  </div>
+
+  <div class="card">
+    <h2 class="section-title">💧 پیگیری سریع</h2>
+    <div id="trackerList"></div>
+    <div class="tr-row tr-sleep">
+      <span class="tr-name">😴 خواب دیشب</span>
+      <div class="tr-main">
+        <div class="tr-track"><div class="tr-fill" id="sleepFill"></div></div>
+        <div class="tr-val" id="sleepVal">—</div>
+      </div>
+      <input type="number" id="sleepInput" min="0" max="16" step="0.5" placeholder="ساعت" inputmode="decimal">
+      <button type="button" class="tr-btn" id="sleepSave">💾</button>
+    </div>
+  </div>
+
+  <div class="card">
     <h2 class="section-title">🎂 تولدها و یادآور</h2>
     <button type="button" class="footer-btn" id="bdaySortBtn" style="margin-bottom:8px">⇅ زودترین تولدها اول</button>
     <form id="bdayForm">
@@ -428,6 +559,40 @@
     <h2 class="section-title" style="margin-top:16px">🗺️ سی روز اخیر</h2>
     <div id="heatmap" class="heatmap"></div>
     <div id="weekReview" style="margin-top:12px"></div>
+    <h2 class="section-title" style="margin-top:16px">📈 آمار عادت‌ها</h2>
+    <div id="habitStats"></div>
+  </div>
+
+  <div class="card">
+    <h2 class="section-title">🏅 نشان‌های من <span id="badgeCount" class="badge-count"></span></h2>
+    <div class="badge-grid" id="badgeGrid"></div>
+  </div>
+
+  <div class="card">
+    <h2 class="section-title">🙏 شکرگزاری شبانه</h2>
+    <form id="gratForm">
+      <div class="grat-inputs">
+        <input type="text" id="grat1" maxlength="80" placeholder="۱. امروز از … ممنونم" autocomplete="off">
+        <input type="text" id="grat2" maxlength="80" placeholder="۲. …" autocomplete="off">
+        <input type="text" id="grat3" maxlength="80" placeholder="۳. …" autocomplete="off">
+      </div>
+      <button type="submit" id="gratSubmit">🙏 ثبت شکرگزاری</button>
+    </form>
+    <div id="gratList" style="margin-top:10px"></div>
+  </div>
+
+  <div class="card">
+    <h2 class="section-title">💌 نامه به خودِ آینده</h2>
+    <p class="card-hint">بنویس و مُهر کن — تا روزی که انتخاب کنی باز نمی‌شه! 🔒</p>
+    <form id="letterForm">
+      <textarea id="letterText" rows="3" maxlength="1000" placeholder="سلام به خودِ ۳۰ روز بعد… امیدوارم این مدت …"></textarea>
+      <div class="brow">
+        <label class="letter-date-label" for="letterDate">📬 باز شدن:</label>
+        <input type="date" id="letterDate">
+        <button type="submit" id="letterSubmit">✉️ مُهر و ارسال</button>
+      </div>
+    </form>
+    <div id="letterList" style="margin-top:10px"></div>
   </div>
 
   <div class="card">
@@ -465,6 +630,9 @@
 /* ==================# ابزارها #================== */
 
 var STORAGE_KEY = "dailyTasksApp_v1";
+
+// 🏅 شناسه‌های مجاز نشان‌ها (قبل از اولین sanitize لازم است)
+var BADGE_IDS = ["first", "t10", "t100", "t500", "s7", "s14", "s30", "pomo1", "pomo10", "goal", "rebound", "journal", "letter", "chal", "thanks", "mood5"];
 
 // تاریخ به‌صورت کلید yyyy-mm-dd بر اساس «تاریخ محلی» (نه UTC) تا باگ نیمه‌شب نداشته باشیم
 function dateKey(d) {
@@ -642,7 +810,7 @@ var bootEncrypted = false;
   try { raw = window.localStorage.getItem(STORAGE_KEY); } catch (e) {}
   if (typeof raw === "string" && raw.indexOf("ENC1:") === 0) bootEncrypted = true;
 })();
-var state = bootEncrypted ? { tasks: [], history: {}, birthdays: [], brain: [], notes: {}, reminders: [], goals: [], pomos: {} } : loadState();
+var state = bootEncrypted ? { tasks: [], history: {}, birthdays: [], brain: [], notes: {}, reminders: [], goals: [], pomos: {}, moods: {}, gratitude: {}, badges: {}, letters: [], challenges: [], trackers: { water: {}, book: {}, sleep: {} }, journals: {} } : loadState();
 
 function loadState() {
   return sanitize(storageGet() || {});
@@ -656,11 +824,12 @@ function doneMapFor(key) {
 
 /* ==================# منطق #================== */
 
-function addTask(title, due) {
+function addTask(title, due, slot) {
   var t = (title || "").trim();
   if (!t) return { ok: false, msg: "عنوان کار خالیه! یه چیزی بنویس." };
   if (t.length > 80) return { ok: false, msg: "عنوان خیلی طولانیه (حداکثر ۸۰ حرف)." };
   if (due && !/^\d{4}-\d{2}-\d{2}$/.test(due)) return { ok: false, msg: "تاریخ انتخابی معتبر نیست." };
+  if (slot !== "am" && slot !== "pm") slot = "";
 
   // جلوگیری از کار تکراری (همان عنوان + همان تاریخ)
   var norm = t.replace(/\s+/g, " ");
@@ -674,7 +843,7 @@ function addTask(title, due) {
   var id = Date.now();
   if (state.tasks.some(function (x) { return x.id === id; })) id += 1;
 
-  var task = { id: id, title: t, createdAt: id };
+  var task = { id: id, title: t, createdAt: id, slot: slot };
   if (due) task.due = due;
   state.tasks.push(task);
   saveState();
@@ -855,11 +1024,18 @@ function renderAll() {
   renderLevel();
   renderHeatmap();
   renderWeekReview();
+  renderHabitStats();
   renderGoals();
   renderNote();
   renderBirthdays();
   renderReminders();
   pomoRender();
+  renderMood();
+  renderGratitude();
+  renderLetters();
+  renderChallenges();
+  renderTrackers();
+  renderBadges();
 }
 
 // اولویت چیدمان در لیست امروز: روزانه (۰) → سررسیدِ امروز (۱) → دیرکرد (۲)؛ ستاره‌دارتر
@@ -903,9 +1079,29 @@ function renderTasks() {
     }
     list.appendChild(empty);
   } else {
-    for (var j = 0; j < active.length; j++) {
-      var t = active[j];
-      list.appendChild(buildTaskRow(t, false, { overdue: !!(t.due && diffDays(t.due, today) < 0) }));
+    // گروه‌بندی روتین: 🌅 صبح → ☀️ بقیه‌ی روز → 🌙 شب
+    var groups = { am: [], "": [], pm: [] };
+    for (var g = 0; g < active.length; g++) {
+      var t = active[g];
+      groups[t.slot === "am" || t.slot === "pm" ? t.slot : ""].push(t);
+    }
+    var order = [["am", "🌅 صبح"], ["", "☀️ بقیه‌ی روز"], ["pm", "🌙 شب"]];
+    var firstHead = true;
+    for (var oi = 0; oi < order.length; oi++) {
+      var gkey = order[oi][0], gtitle = order[oi][1], gtasks = groups[gkey];
+      if (gtasks.length === 0) continue;
+      if (gtasks.length !== active.length || gkey !== "") {
+        var head = document.createElement("div");
+        head.className = "routine-head";
+        if (!firstHead) head.style.marginTop = "14px";
+        head.textContent = gtitle + " (" + toFa(gtasks.length) + ")";
+        list.appendChild(head);
+        firstHead = false;
+      }
+      for (var j = 0; j < gtasks.length; j++) {
+        var t2 = gtasks[j];
+        list.appendChild(buildTaskRow(t2, false, { overdue: !!(t2.due && diffDays(t2.due, today) < 0) }));
+      }
     }
   }
 
@@ -1186,13 +1382,55 @@ function buildTaskRow(task, done, opts) {
   rep.textContent = task.rep ? "🔁" : "1×";
   rep.addEventListener("click", function () { toggleRep(task.id); });
 
+  var jrn = null;
+  if (task.rep === true) {
+    jrn = document.createElement("button");
+    jrn.className = "task-journal";
+    jrn.type = "button";
+    var jt = journalText(task.id, todayKey());
+    if (jt !== null) jrn.classList.add("has-entry");
+    jrn.title = "📓 دفترچه‌ی این عادت";
+    jrn.setAttribute("aria-label", "دفترچه‌ی عادت: " + task.title);
+    jrn.textContent = "📓";
+    jrn.addEventListener("click", function () { openJournal(task.id); });
+  }
+
   row.appendChild(cb);
   row.appendChild(title);
   row.appendChild(badge);
+  if (jrn) row.appendChild(jrn);
   row.appendChild(star);
   row.appendChild(rep);
   row.appendChild(del);
   return row;
+}
+
+/* ===== 📓 دفترچه‌ی هر عادت ===== */
+function journalText(taskId, key) {
+  if (!state.journals || !state.journals[taskId]) return null;
+  var v = state.journals[taskId][key];
+  return typeof v === "string" ? v : null;
+}
+
+function openJournal(taskId) {
+  var task = null;
+  for (var i = 0; i < state.tasks.length; i++) if (state.tasks[i].id === taskId) task = state.tasks[i];
+  if (!task) return;
+  var cur = journalText(taskId, todayKey()) || "";
+  var txt = window.prompt("📓 دفترچه‌ی «" + task.title + "» — امروز چطور پیش رفت؟", cur);
+  if (txt === null) return;
+  txt = txt.trim().slice(0, 500);
+  if (!txt) {
+    if (state.journals[taskId]) { delete state.journals[taskId][todayKey()]; }
+    showToast("یادداشت امروز پاک شد");
+  } else {
+    if (!state.journals[taskId]) state.journals[taskId] = {};
+    state.journals[taskId][todayKey()] = txt;
+    showToast("در دفترچه ثبت شد 📓");
+  }
+  saveState();
+  markDirty();
+  renderAll();
 }
 
 function toggleRep(id) {
@@ -1882,18 +2120,25 @@ function renderQuote() {
   $("quoteLine").textContent = "💬 " + QUOTES[doy % QUOTES.length];
 }
 
-/* ==================# 🔥 زنجیره‌ی هر کار #================== */
+/* ==================# 🔥 زنجیره‌ی هر کار (بخشنده: هرگز دوبار از دست نده) #================== */
 
 // چند روز پشت‌سرهم این کار تیک خورده (اگر امروز نخورده، تا دیروز می‌شماریم)
-function taskStreak(id) {
+// قانون 🧊: یک روزِ جاافتاده زنجیره را نمی‌شکند — اگر فردایش جبران کنی، زنجیره زنده می‌ماند
+function streakInfo(id) {
   var n = 0, i = 0;
   if (!doneMapFor(todayKey())[id]) i = 1;
+  var forgave = false;
   for (; i < 3650; i++) {
     var h = state.history[keyDaysAgo(i)];
-    if (h && h[id]) n++;
-    else break;
+    if (h && h[id]) { n++; continue; }
+    if (!forgave && n > 0) { forgave = true; continue; } // 🧊 یک‌بار بخشش
+    break;
   }
-  return n;
+  return { n: n, forgave: forgave };
+}
+
+function taskStreak(id) {
+  return streakInfo(id).n;
 }
 
 /* ==================# 🏆 امتیاز و سطح #================== */
@@ -2186,6 +2431,568 @@ $("pomoReset").addEventListener("click", function () {
   pomoRender();
 });
 
+/* ==================# 🌡️ حالِ روز #================== */
+
+var MOODS = [
+  { v: 4, e: "🤩", t: "عالی" },
+  { v: 3, e: "🙂", t: "خوب" },
+  { v: 2, e: "😐", t: "معمولی" },
+  { v: 1, e: "😣", t: "بد" }
+];
+
+function moodEmoji(v) { for (var i = 0; i < MOODS.length; i++) if (MOODS[i].v === v) return MOODS[i].e; return "·"; }
+function moodName(v) { for (var i = 0; i < MOODS.length; i++) if (MOODS[i].v === v) return MOODS[i].t; return ""; }
+
+function setMood(v) {
+  state.moods[todayKey()] = v;
+  saveState();
+  markDirty();
+  renderAll();
+  showToast("حال امروز ثبت شد " + moodEmoji(v));
+}
+
+function renderMood() {
+  var row = $("moodRow");
+  if (!row) return;
+  var today = todayKey();
+  var cur = state.moods[today] || 0;
+  row.textContent = "";
+  for (var i = 0; i < MOODS.length; i++) {
+    var m = MOODS[i];
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "mood-btn" + (cur === m.v ? " mood-selected" : "");
+    b.setAttribute("aria-label", "حالِ امروز: " + m.t);
+    b.textContent = m.e;
+    var sm = document.createElement("small");
+    sm.textContent = m.t;
+    b.appendChild(sm);
+    b.addEventListener("click", function (vv) { return function () { setMood(vv); }; }(m.v));
+    row.appendChild(b);
+  }
+  var tr = $("moodTrend");
+  tr.textContent = "";
+  for (var d = 13; d >= 0; d--) {
+    var key = keyDaysAgo(d);
+    var v2 = state.moods[key];
+    var sp = document.createElement("span");
+    sp.textContent = v2 ? moodEmoji(v2) : "·";
+    sp.title = faDate(key) + (v2 ? " — " + moodName(v2) : "");
+    tr.appendChild(sp);
+  }
+}
+
+/* ==================# 🙏 شکرگزاری شبانه #================== */
+
+function renderGratitude() {
+  var today = todayKey();
+  var cur = state.gratitude[today] || [];
+  var inputs = [$("grat1"), $("grat2"), $("grat3")];
+  for (var x = 0; x < 3; x++) if (document.activeElement !== inputs[x]) inputs[x].value = cur[x] || "";
+
+  var list = $("gratList");
+  list.textContent = "";
+  var keys = Object.keys(state.gratitude).sort().reverse().slice(0, 7);
+  var any = false;
+  for (var i = 0; i < keys.length; i++) {
+    var items = state.gratitude[keys[i]];
+    if (!items || !items.length) continue;
+    any = true;
+    var row = document.createElement("div");
+    row.className = "grat-row";
+    var when = document.createElement("div");
+    when.className = "grat-when";
+    when.textContent = keys[i] === today ? "امروز 🌙" : relLabel(keys[i]) + " — " + faDate(keys[i]);
+    row.appendChild(when);
+    for (var j = 0; j < items.length; j++) {
+      var it = document.createElement("div");
+      it.textContent = "🙏 " + items[j];
+      row.appendChild(it);
+    }
+    list.appendChild(row);
+  }
+  if (!any) {
+    var e = document.createElement("div");
+    e.className = "empty-msg";
+    e.textContent = "هر شب سه چیز بنویس که بابتش ممنونی — هفتگی که بگذره، حسِ متفاوتی داری! ✨";
+    list.appendChild(e);
+  }
+}
+
+$("gratForm").addEventListener("submit", function (e) {
+  e.preventDefault();
+  var items = [$("grat1").value, $("grat2").value, $("grat3").value].map(function (s) { return s.trim().slice(0, 80); }).filter(Boolean);
+  if (items.length === 0) { showToast("حداقل یک شکرگزاری بنویس 🙏"); return; }
+  state.gratitude[todayKey()] = items;
+  saveState();
+  markDirty();
+  renderAll();
+  showToast("شکرگزاری ثبت شد 🙏");
+});
+
+/* ==================# 💌 نامه به خودِ آینده #================== */
+
+function renderLetters() {
+  var today = todayKey();
+  var list = $("letterList");
+  if (!list) return;
+  list.textContent = "";
+
+  // نامه‌های رسیده‌ی نخوانده → جعبه‌ی طلایی بالای لیست
+  for (var u = 0; u < state.letters.length; u++) {
+    var L0 = state.letters[u];
+    if (L0.openAt <= today && !L0.seen) {
+      var ban = document.createElement("div");
+      ban.className = "letter-banner";
+      var bt = document.createElement("div");
+      bt.className = "lb-title";
+      bt.textContent = "💌 نامه‌ای که " + relLabel(dateKey(new Date(L0.createdAt))) + " نوشتی، امروز رسید!";
+      ban.appendChild(bt);
+      var bx = document.createElement("div");
+      bx.className = "letter-text";
+      bx.textContent = L0.text;
+      ban.appendChild(bx);
+      var bb = document.createElement("button");
+      bb.type = "button";
+      bb.className = "lb-btn";
+      bb.textContent = "✅ خواندم";
+      bb.addEventListener("click", function (lid) { return function () {
+        for (var q = 0; q < state.letters.length; q++) if (state.letters[q].id === lid) state.letters[q].seen = true;
+        saveState(); markDirty(); renderAll(); showToast("نامه به آرشیو رفت 💌");
+      }; }(L0.id));
+      ban.appendChild(bb);
+      list.appendChild(ban);
+    }
+  }
+
+  // لیست نامه‌ها (جدیدترین اول)
+  var sorted = state.letters.slice().sort(function (a, b) { return b.createdAt - a.createdAt; });
+  for (var i = 0; i < sorted.length; i++) {
+    var L = sorted[i];
+    var row = document.createElement("div");
+    row.className = "letter-row";
+    var meta = document.createElement("div");
+    meta.className = "letter-meta";
+    if (L.openAt > today) {
+      var days = diffDays(L.openAt, today);
+      var seal = document.createElement("div");
+      seal.className = "letter-seal";
+      seal.textContent = "🔒 مُهر شده — تا " + toFa(days) + " روز دیگر باز نمی‌شود";
+      row.appendChild(seal);
+      meta.textContent = "نوشته شده در " + faDate(dateKey(new Date(L.createdAt)));
+    } else {
+      meta.textContent = "💌 از " + faDate(dateKey(new Date(L.createdAt))) + " برایت رسیده:";
+      var txt = document.createElement("div");
+      txt.className = "letter-text";
+      txt.textContent = L.text;
+      row.appendChild(txt);
+    }
+    row.appendChild(meta);
+    var delL = document.createElement("button");
+    delL.className = "task-delete";
+    delL.type = "button";
+    delL.title = "حذف نامه";
+    delL.textContent = "🗑️";
+    delL.addEventListener("click", function (lid) { return function () {
+      if (!window.confirm("این نامه برای همیشه پاک بشه؟")) return;
+      state.letters = state.letters.filter(function (x) { return x.id !== lid; });
+      saveState(); markDirty(); renderAll(); showToast("نامه پاک شد 🗑️");
+    }; }(L.id));
+    row.appendChild(delL);
+    list.appendChild(row);
+  }
+  if (!state.letters.length) {
+    var e = document.createElement("div");
+    e.className = "empty-msg";
+    e.textContent = "به خودِ آینده‌ات بنویس — مثلاً بگو تا ۳۰ روز دیگر باید به چه هدفی رسیده باشی! ✉️";
+    list.appendChild(e);
+  }
+  // تاریخ پیش‌فرض: ۳۰ روز بعد
+  if (!$("letterDate").value) $("letterDate").value = keyFromTodayPlus(30);
+}
+
+$("letterForm").addEventListener("submit", function (e) {
+  e.preventDefault();
+  var text = $("letterText").value.trim();
+  if (!text) { showToast("اول نامه رو بنویس ✍️"); return; }
+  var openAt = $("letterDate").value;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(openAt)) { showToast("تاریخ باز شدن رو انتخاب کن 📬"); return; }
+  var dd = diffDays(openAt, todayKey());
+  if (dd < 1) { showToast("نامه باید برای فردا یا بعدتر باشد"); return; }
+  if (dd > 365) { showToast("حداکثر یک سال آینده"); return; }
+  var id = Date.now();
+  while (state.letters.some(function (x) { return x.id === id; })) id += 1;
+  state.letters.push({ id: id, text: text.slice(0, 1000), createdAt: id, openAt: openAt, seen: false });
+  $("letterText").value = "";
+  $("letterDate").value = keyFromTodayPlus(30);
+  saveState();
+  markDirty();
+  renderAll();
+  showToast("نامه مُهر شد 🔒 تا " + toFa(dd) + " روز دیگر!");
+});
+
+/* ==================# 🏃 چالش ۳۰ روزه #================== */
+
+// کلیدِ N روز بعد از startKey
+function keyPlus(startKey, n) {
+  var p = startKey.split("-");
+  return dateKey(new Date(+p[0], +p[1] - 1, +p[2] + n));
+}
+
+function challengeDoneCount(ch) {
+  var today = todayKey();
+  var n = 0;
+  for (var i = 0; i < 30; i++) {
+    var key = keyPlus(ch.startKey, i);
+    if (key > today) break;
+    if (state.history[key] && state.history[key][ch.taskId]) n++;
+  }
+  return n;
+}
+
+function renderChallenges() {
+  var sel = $("chalTask");
+  if (!sel) return;
+  var curSel = sel.value;
+  sel.textContent = "";
+  var reps = state.tasks.filter(function (t) { return t.rep === true; });
+  if (reps.length === 0) {
+    var o0 = document.createElement("option");
+    o0.value = "";
+    o0.textContent = "اول یک کار 🔁 بساز…";
+    sel.appendChild(o0);
+  } else {
+    for (var i = 0; i < reps.length; i++) {
+      var o = document.createElement("option");
+      o.value = String(reps[i].id);
+      o.textContent = reps[i].title;
+      sel.appendChild(o);
+    }
+    var ids = {};
+    for (var k = 0; k < reps.length; k++) ids[String(reps[k].id)] = true;
+    sel.value = ids[curSel] ? curSel : String(reps[0].id);
+  }
+
+  var list = $("chalList");
+  list.textContent = "";
+  if (!state.challenges.length) {
+    var e = document.createElement("div");
+    e.className = "empty-msg";
+    e.textContent = "یه کار 🔁 را ۳۰ روز پشت‌سرهم بزن — بعدش دیگر عادتِ همیشگی می‌شود! 🚀";
+    list.appendChild(e);
+    return;
+  }
+  for (var c = 0; c < state.challenges.length; c++) list.appendChild(buildChallengeRow(state.challenges[c]));
+}
+
+function buildChallengeRow(ch) {
+  var row = document.createElement("div");
+  row.className = "chal-row";
+
+  var task = null;
+  for (var i = 0; i < state.tasks.length; i++) if (state.tasks[i].id === ch.taskId) task = state.tasks[i];
+
+  var title = document.createElement("div");
+  title.className = "chal-title";
+  title.textContent = "🏃 چالش ۳۰ روزه: " + (task ? task.title : "کار حذف شده ⚠️");
+  row.appendChild(title);
+
+  var today = todayKey();
+  var doneN = 0, failedAt = 0;
+  var grid = document.createElement("div");
+  grid.className = "chal-grid";
+  for (var d = 0; d < 30; d++) {
+    var key = keyPlus(ch.startKey, d);
+    var doneD = !!(state.history[key] && state.history[key][ch.taskId]);
+    if (doneD) doneN++;
+    else if (key <= today && !failedAt) failedAt = d + 1;
+    var cell = document.createElement("div");
+    cell.className = "chal-cell" + (doneD ? " cc-done" : (key <= today ? " cc-miss" : ""));
+    cell.title = faDate(key) + (doneD ? " ✅" : (key <= today ? " 💔" : ""));
+    grid.appendChild(cell);
+  }
+  var completed = doneN >= 30;
+
+  var sub = document.createElement("div");
+  sub.className = "chal-sub";
+  sub.textContent = "شروع: " + faDate(ch.startKey) + " • " + toFa(doneN) + " از ۳۰ روز";
+  row.appendChild(sub);
+  row.appendChild(grid);
+
+  var btns = document.createElement("div");
+  btns.className = "chal-btns";
+  var msg = document.createElement("span");
+  msg.className = "chal-msg " + (completed ? "ok" : (failedAt ? "bad" : ""));
+  if (completed) msg.textContent = "🏆 کامل شد! رسماً عادت شد!";
+  else if (failedAt) msg.textContent = "💔 روز " + toFa(failedAt) + " جا موند — دوباره شروع کن 💪";
+  else msg.textContent = "🔥 " + toFa(doneN) + " روز پشت‌سرهم — ادامه بده!";
+  btns.appendChild(msg);
+
+  if (failedAt || completed) {
+    var rest = document.createElement("button");
+    rest.type = "button";
+    rest.className = "footer-btn";
+    rest.textContent = "🔄 شروع دوباره";
+    rest.addEventListener("click", function () {
+      ch.startKey = todayKey();
+      saveState(); markDirty(); renderAll();
+      showToast("چالش از امروز ری‌استارت شد 🚀");
+    });
+    btns.appendChild(rest);
+  }
+  var del = document.createElement("button");
+  del.type = "button";
+  del.className = "task-delete";
+  del.title = "حذف چالش";
+  del.textContent = "🗑️";
+  del.addEventListener("click", function () {
+    if (!window.confirm("این چالش حذف بشه؟")) return;
+    state.challenges = state.challenges.filter(function (x) { return x.id !== ch.id; });
+    saveState(); markDirty(); renderAll(); showToast("چالش پاک شد 🗑️");
+  });
+  btns.appendChild(del);
+  row.appendChild(btns);
+  return row;
+}
+
+$("chalForm").addEventListener("submit", function (e) {
+  e.preventDefault();
+  var taskId = parseInt($("chalTask").value, 10);
+  if (!taskId) { showToast("اول یک کار 🔁 بساز تا چالش بسازی"); return; }
+  var exists = state.challenges.some(function (c) { return c.taskId === taskId; });
+  if (exists) { showToast("برای این کار چالش فعاله! اول همون رو تمام کن 🏃"); return; }
+  var id = Date.now();
+  while (state.challenges.some(function (x) { return x.id === id; })) id += 1;
+  state.challenges.push({ id: id, taskId: taskId, startKey: todayKey() });
+  saveState();
+  markDirty();
+  renderAll();
+  showToast("چالش ۳۰ روزه شروع شد! 🚀 روز اولش همین امروزه");
+});
+
+/* ==================# 💧 پیگیری سریع (آب/کتاب/خواب) #================== */
+
+var TRACKERS = [
+  { id: "water", name: "💧 آب", unit: "لیوان", goal: 8, step: 1, max: 20 },
+  { id: "book", name: "📖 کتاب‌خوانی", unit: "دقیقه", goal: 30, step: 10, max: 480 }
+];
+
+function setTracker(id, val, def) {
+  var old = state.trackers[id][todayKey()] || 0;
+  val = Math.max(0, Math.min(def.max, val));
+  if (val === 0) delete state.trackers[id][todayKey()];
+  else state.trackers[id][todayKey()] = val;
+  saveState();
+  markDirty();
+  renderAll();
+  if (old < def.goal && val >= def.goal) showToast("🎉 هدفِ " + def.name + " امروز کامل شد!");
+}
+
+function renderTrackers() {
+  var list = $("trackerList");
+  if (!list) return;
+  var today = todayKey();
+  list.textContent = "";
+  for (var i = 0; i < TRACKERS.length; i++) {
+    var tr = TRACKERS[i];
+    var val = state.trackers[tr.id][today] || 0;
+    var row = document.createElement("div");
+    row.className = "tr-row";
+
+    var name = document.createElement("span");
+    name.className = "tr-name";
+    name.textContent = tr.name;
+
+    var main = document.createElement("div");
+    main.className = "tr-main";
+    var track = document.createElement("div");
+    track.className = "tr-track";
+    var fill = document.createElement("div");
+    fill.className = "tr-fill" + (val >= tr.goal ? " full" : "");
+    fill.style.width = Math.min(100, Math.round((val / tr.goal) * 100)) + "%";
+    track.appendChild(fill);
+    var vtxt = document.createElement("div");
+    vtxt.className = "tr-val";
+    vtxt.textContent = toFa(val) + " از " + toFa(tr.goal) + " " + tr.unit + (val >= tr.goal ? " 🎉" : "");
+    main.appendChild(track);
+    main.appendChild(vtxt);
+
+    var minus = document.createElement("button");
+    minus.type = "button";
+    minus.className = "tr-btn minus";
+    minus.title = "کم کردن";
+    minus.textContent = "−";
+    minus.addEventListener("click", function (tid, nv, td) { return function () { setTracker(tid, nv, td); }; }(tr.id, val - tr.step, tr));
+
+    var plus = document.createElement("button");
+    plus.type = "button";
+    plus.className = "tr-btn";
+    plus.title = "اضافه کردن";
+    plus.textContent = "+";
+    plus.setAttribute("aria-label", "افزودن " + tr.name);
+    plus.addEventListener("click", function (tid, nv, td) { return function () { setTracker(tid, nv, td); }; }(tr.id, val + tr.step, tr));
+
+    row.appendChild(name);
+    row.appendChild(main);
+    row.appendChild(minus);
+    row.appendChild(plus);
+    list.appendChild(row);
+  }
+  // 😴 خواب دیشب
+  var sv = state.trackers.sleep[today] || 0;
+  var h = sv / 60;
+  $("sleepFill").style.width = Math.min(100, Math.round((h / 8) * 100)) + "%";
+  $("sleepVal").textContent = sv ? toFa((Math.round(h * 10) / 10).toLocaleString("fa-IR")) + " ساعت خوابیدی (هدف ۸)" : "امشب چند ساعت می‌خوابی؟";
+}
+
+$("sleepSave").addEventListener("click", function () {
+  var v = parseFloat($("sleepInput").value);
+  if (isNaN(v) || v < 0 || v > 16) { showToast("عدد بین ۰ تا ۱۶ وارد کن"); return; }
+  var m = Math.round(v * 60);
+  if (m === 0) delete state.trackers.sleep[todayKey()];
+  else state.trackers.sleep[todayKey()] = m;
+  $("sleepInput").value = "";
+  saveState();
+  markDirty();
+  renderAll();
+  showToast("خواب دیشب ثبت شد 😴");
+});
+
+/* ==================# 📈 آمار هر عادت #================== */
+
+function renderHabitStats() {
+  var el = $("habitStats");
+  if (!el) return;
+  el.textContent = "";
+  var reps = state.tasks.filter(function (t) { return t.rep === true; });
+  if (!reps.length) {
+    var e0 = document.createElement("div");
+    e0.className = "empty-msg";
+    e0.textContent = "وقتی کارهای 🔁 بسازی، نرخ موفقیت هر کدام این‌جا نمایش داده می‌شود 📈";
+    el.appendChild(e0);
+    return;
+  }
+  var today = todayKey();
+  for (var i = 0; i < reps.length; i++) {
+    var t = reps[i];
+    var createdKey = dateKey(new Date(t.createdAt));
+    var age = diffDays(today, createdKey) + 1;
+    var win = Math.max(1, Math.min(30, age));
+    var done = 0;
+    for (var d = 0; d < win; d++) {
+      var h = state.history[keyDaysAgo(d)];
+      if (h && h[t.id]) done++;
+    }
+    var pct = Math.round((done / win) * 100);
+
+    var row = document.createElement("div");
+    row.className = "hs-row";
+    var top = document.createElement("div");
+    top.className = "hs-top";
+    var nm = document.createElement("span");
+    nm.className = "hs-name";
+    nm.textContent = t.title;
+    var pc = document.createElement("span");
+    pc.className = "hs-pct";
+    pc.textContent = toFa(pct) + "٪ (" + toFa(done) + " از " + toFa(win) + " روز)";
+    top.appendChild(nm);
+    top.appendChild(pc);
+    var track = document.createElement("div");
+    track.className = "hs-track";
+    var fill = document.createElement("div");
+    fill.className = "hs-fill";
+    fill.style.width = pct + "%";
+    track.appendChild(fill);
+    row.appendChild(top);
+    row.appendChild(track);
+    el.appendChild(row);
+  }
+}
+
+/* ==================# 🏅 نشان‌ها (دستاوردها) #================== */
+
+var BADGES = [
+  { id: "first", icon: "🌱", name: "اولین قدم", hint: "اولین تیک", test: function (c) { return c.total >= 1; } },
+  { id: "t10", icon: "🔟", name: "۱۰ تیک", hint: "مجموع ۱۰ کار", test: function (c) { return c.total >= 10; } },
+  { id: "t100", icon: "💯", name: "۱۰۰ تیک", hint: "مجموع ۱۰۰ کار", test: function (c) { return c.total >= 100; } },
+  { id: "t500", icon: "🌟", name: "۵۰۰ تیک", hint: "مجموع ۵۰۰ کار", test: function (c) { return c.total >= 500; } },
+  { id: "s7", icon: "🔥", name: "زنجیره ۷", hint: "۷ روز پشت‌سرهم", test: function (c) { return c.maxStreak >= 7; } },
+  { id: "s14", icon: "⚡", name: "زنجیره ۱۴", hint: "۱۴ روز پشت‌سرهم", test: function (c) { return c.maxStreak >= 14; } },
+  { id: "s30", icon: "👑", name: "زنجیره ۳۰", hint: "۳۰ روز پشت‌سرهم", test: function (c) { return c.maxStreak >= 30; } },
+  { id: "pomo1", icon: "🍅", name: "اولین پومودورو", hint: "۲۵ دقیقه تمرکز", test: function (c) { return c.totalPomos >= 1; } },
+  { id: "pomo10", icon: "🧘", name: "۱۰ پومودورو", hint: "استاد تمرکز", test: function (c) { return c.totalPomos >= 10; } },
+  { id: "goal", icon: "🎯", name: "هدفِ هفتگی", hint: "یک هدف هفتگی کامل", test: function (c) { return c.anyGoalDone; } },
+  { id: "rebound", icon: "🧊", name: "برگشت قهرمانانه", hint: "زنجیره نشکست", test: function (c) { return c.anyRebound; } },
+  { id: "journal", icon: "📓", name: "دونویس", hint: "اولین دفترچه‌ی عادت", test: function (c) { return c.anyJournal; } },
+  { id: "letter", icon: "💌", name: "نامه‌نگار", hint: "اولین نامه به آینده", test: function (c) { return c.anyLetter; } },
+  { id: "chal", icon: "🏆", name: "چالش کامل", hint: "چالش ۳۰ روزه تمام", test: function (c) { return c.anyChallengeDone; } },
+  { id: "thanks", icon: "🙏", name: "شکرگزار", hint: "اولین شکرگزاری", test: function (c) { return c.anyGratitude; } },
+  { id: "mood5", icon: "🌡️", name: "خودشناس", hint: "۵ روز حال ثبت‌شده", test: function (c) { return c.moodsCount >= 5; } }
+];
+
+function badgeContext() {
+  var c = { total: totalDoneCount(), maxStreak: 0, anyRebound: false, totalPomos: 0, anyGoalDone: false, anyJournal: false, anyLetter: state.letters.length > 0, anyChallengeDone: false, anyGratitude: false, moodsCount: Object.keys(state.moods).length };
+  for (var i = 0; i < state.tasks.length; i++) {
+    if (state.tasks[i].rep !== true) continue;
+    var info = streakInfo(state.tasks[i].id);
+    if (info.n > c.maxStreak) c.maxStreak = info.n;
+    if (info.forgave && info.n >= 2) c.anyRebound = true;
+  }
+  for (var pk in state.pomos) c.totalPomos += state.pomos[pk];
+  for (var g = 0; g < state.goals.length; g++) {
+    var goal = state.goals[g];
+    var task = null;
+    for (var ti = 0; ti < state.tasks.length; ti++) if (state.tasks[ti].id === goal.taskId) task = state.tasks[ti];
+    if (task && weekTicksFor(task.id) >= goal.target) { c.anyGoalDone = true; break; }
+  }
+  for (var jk in state.journals) {
+    var inner = state.journals[jk];
+    for (var jk2 in inner) { if (inner[jk2]) { c.anyJournal = true; break; } }
+    if (c.anyJournal) break;
+  }
+  for (var ch = 0; ch < state.challenges.length; ch++) {
+    if (challengeDoneCount(state.challenges[ch]) >= 30) { c.anyChallengeDone = true; break; }
+  }
+  for (var gk in state.gratitude) { if (state.gratitude[gk] && state.gratitude[gk].length) { c.anyGratitude = true; break; } }
+  return c;
+}
+
+function renderBadges() {
+  var grid = $("badgeGrid");
+  if (!grid) return;
+  var ctx = badgeContext();
+  var newly = [];
+  for (var i = 0; i < BADGES.length; i++) {
+    var b = BADGES[i];
+    if (!state.badges[b.id] && b.test(ctx)) { state.badges[b.id] = todayKey(); newly.push(b); }
+  }
+  if (newly.length) {
+    saveState();
+    if (newly.length === 1) showToast("🏅 نشان جدید: " + newly[0].name + " " + newly[0].icon);
+    else showToast("🏅 " + toFa(newly.length) + " نشان جدید باز شد! 🎉");
+  }
+  $("badgeCount").textContent = toFa(Object.keys(state.badges).length) + " از " + toFa(BADGES.length);
+  grid.textContent = "";
+  for (var bi = 0; bi < BADGES.length; bi++) {
+    var bd = BADGES[bi];
+    var cell = document.createElement("div");
+    cell.className = "badge-cell " + (state.badges[bd.id] ? "unlocked" : "locked");
+    var ic = document.createElement("div");
+    ic.className = "bi";
+    ic.textContent = bd.icon;
+    var nm = document.createElement("div");
+    nm.className = "bn";
+    nm.textContent = state.badges[bd.id] ? bd.name : "🔒";
+    var hh = document.createElement("div");
+    hh.className = "bh";
+    hh.textContent = bd.hint;
+    cell.appendChild(ic);
+    cell.appendChild(nm);
+    cell.appendChild(hh);
+    grid.appendChild(cell);
+  }
+}
+
 /* ==================# پشتیبان‌گیری #================== */
 
 function exportData() {
@@ -2230,7 +3037,14 @@ function importData(file) {
         notes: (data.notes && typeof data.notes === "object") ? data.notes : {},
         reminders: Array.isArray(data.reminders) ? data.reminders : [],
         goals: Array.isArray(data.goals) ? data.goals : [],
-        pomos: (data.pomos && typeof data.pomos === "object") ? data.pomos : {}
+        pomos: (data.pomos && typeof data.pomos === "object") ? data.pomos : {},
+        moods: (data.moods && typeof data.moods === "object") ? data.moods : {},
+        gratitude: (data.gratitude && typeof data.gratitude === "object") ? data.gratitude : {},
+        badges: (data.badges && typeof data.badges === "object") ? data.badges : {},
+        letters: Array.isArray(data.letters) ? data.letters : [],
+        challenges: Array.isArray(data.challenges) ? data.challenges : [],
+        trackers: (data.trackers && typeof data.trackers === "object") ? data.trackers : {},
+        journals: (data.journals && typeof data.journals === "object") ? data.journals : {}
       };
 
       // ادغام کارها (بدون تکرار بر اساس id؛ اگر id نبود بر اساس عنوان)
@@ -2285,6 +3099,48 @@ function importData(file) {
         var rr0 = incoming.reminders[rj];
         if (rr0 && typeof rr0.id === "number" && !seenR[rr0.id]) { state.reminders.push(rr0); seenR[rr0.id] = true; }
       }
+      // 🌡️ ادغام حال‌ها
+      for (var imk in incoming.moods) {
+        if (!state.moods[imk]) state.moods[imk] = incoming.moods[imk];
+      }
+      // 🙏 ادغام شکرگزاری‌ها
+      for (var igk in incoming.gratitude) {
+        if (!state.gratitude[igk]) state.gratitude[igk] = incoming.gratitude[igk];
+      }
+      // 🏅 ادغام نشان‌ها
+      for (var ibk in incoming.badges) {
+        if (!state.badges[ibk]) state.badges[ibk] = incoming.badges[ibk];
+      }
+      // 💌 ادغام نامه‌ها
+      var seenL = {};
+      for (var li0 = 0; li0 < state.letters.length; li0++) seenL[state.letters[li0].id] = true;
+      for (var lj = 0; lj < incoming.letters.length; lj++) {
+        var LL = incoming.letters[lj];
+        if (LL && typeof LL.id === "number" && !seenL[LL.id]) { state.letters.push(LL); seenL[LL.id] = true; }
+      }
+      // 🏃 ادغام چالش‌ها
+      var seenCh = {};
+      for (var chi0 = 0; chi0 < state.challenges.length; chi0++) seenCh[state.challenges[chi0].id] = true;
+      for (var chj = 0; chj < incoming.challenges.length; chj++) {
+        var CH = incoming.challenges[chj];
+        if (CH && typeof CH.id === "number" && !seenCh[CH.id]) { state.challenges.push(CH); seenCh[CH.id] = true; }
+      }
+      // 💧 ادغام پیگیرها (بیشینه)
+      var tkIds = ["water", "book", "sleep"];
+      for (var tti = 0; tti < tkIds.length; tti++) {
+        var ttk = tkIds[tti];
+        for (var tkk in (incoming.trackers[ttk] || {})) {
+          state.trackers[ttk][tkk] = Math.max(state.trackers[ttk][tkk] || 0, incoming.trackers[ttk][tkk] || 0);
+          if (state.trackers[ttk][tkk] <= 0) delete state.trackers[ttk][tkk];
+        }
+      }
+      // 📓 ادغام دفترچه‌ها
+      for (var ijk in incoming.journals) {
+        if (!state.journals[ijk]) state.journals[ijk] = incoming.journals[ijk];
+        else for (var ijdk in incoming.journals[ijk]) {
+          if (!state.journals[ijk][ijkd]) state.journals[ijk][ijkd] = incoming.journals[ijk][ijkd];
+        }
+      }
       // پاکسازی داده‌های معیوب احتمالی
       state = sanitize(state);
       saveState();
@@ -2307,6 +3163,7 @@ function sanitize(s) {
       if (t && typeof t.id === "number" && typeof t.title === "string" && t.title.trim() && typeof t.createdAt === "number") {
         var due = (typeof t.due === "string" && /^\d{4}-\d{2}-\d{2}$/.test(t.due)) ? t.due : null;
         var task = { id: t.id, title: t.title.trim(), createdAt: t.createdAt, star: t.star === true, rep: t.rep === true };
+        if (t.slot === "am" || t.slot === "pm") task.slot = t.slot;
         if (due) task.due = due;
         clean.tasks.push(task);
       }
@@ -2388,6 +3245,81 @@ function sanitize(s) {
       if (/^\d{4}-\d{2}-\d{2}$/.test(nk) && typeof s.notes[nk] === "string" && s.notes[nk].length <= 2000) {
         clean.notes[nk] = s.notes[nk];
       }
+    }
+  }
+  // 🌡️ حالِ روزها
+  clean.moods = {};
+  if (s.moods && typeof s.moods === "object") {
+    for (var mk in s.moods) {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(mk) && [1, 2, 3, 4].indexOf(s.moods[mk]) !== -1) clean.moods[mk] = s.moods[mk];
+    }
+  }
+  // 🙏 شکرگزاری‌ها
+  clean.gratitude = {};
+  if (s.gratitude && typeof s.gratitude === "object") {
+    for (var gk in s.gratitude) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(gk) || !Array.isArray(s.gratitude[gk])) continue;
+      var gitems = s.gratitude[gk].filter(function (x) { return typeof x === "string" && x.trim() && x.length <= 80; }).slice(0, 3);
+      if (gitems.length) clean.gratitude[gk] = gitems;
+    }
+  }
+  // 🏅 نشان‌ها
+  clean.badges = {};
+  if (s.badges && typeof s.badges === "object") {
+    for (var bk in s.badges) {
+      if (BADGE_IDS.indexOf(bk) !== -1 && typeof s.badges[bk] === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s.badges[bk])) clean.badges[bk] = s.badges[bk];
+    }
+  }
+  // 💌 نامه‌ها
+  clean.letters = [];
+  if (Array.isArray(s.letters)) {
+    for (var li = 0; li < s.letters.length; li++) {
+      var L = s.letters[li];
+      if (L && typeof L.id === "number" && typeof L.text === "string" && L.text.trim() && L.text.length <= 1000 &&
+          typeof L.createdAt === "number" && typeof L.openAt === "string" && /^\d{4}-\d{2}-\d{2}$/.test(L.openAt)) {
+        clean.letters.push({ id: L.id, text: L.text.trim(), createdAt: L.createdAt, openAt: L.openAt, seen: L.seen === true });
+      }
+    }
+  }
+  // 🏃 چالش‌ها
+  clean.challenges = [];
+  if (Array.isArray(s.challenges)) {
+    for (var chi = 0; chi < s.challenges.length; chi++) {
+      var ch = s.challenges[chi];
+      if (ch && typeof ch.id === "number" && typeof ch.taskId === "number" && typeof ch.startKey === "string" && /^\d{4}-\d{2}-\d{2}$/.test(ch.startKey)) {
+        clean.challenges.push({ id: ch.id, taskId: ch.taskId, startKey: ch.startKey });
+      }
+    }
+  }
+  // 💧 پیگیرها (آب/کتاب/خواب) — سقفِ جدا برای هر کدام
+  clean.trackers = { water: {}, book: {}, sleep: {} };
+  if (s.trackers && typeof s.trackers === "object") {
+    var tkCaps = { water: 20, book: 480, sleep: 960 };
+    var tkIds = ["water", "book", "sleep"];
+    for (var ti = 0; ti < tkIds.length; ti++) {
+      var tkey = tkIds[ti];
+      if (s.trackers[tkey] && typeof s.trackers[tkey] === "object") {
+        for (var tk in s.trackers[tkey]) {
+          var tv = s.trackers[tkey][tk];
+          if (/^\d{4}-\d{2}-\d{2}$/.test(tk) && typeof tv === "number" && tv > 0 && tv <= tkCaps[tkey] && tv === Math.round(tv)) {
+            clean.trackers[tkey][tk] = tv;
+          }
+        }
+      }
+    }
+  }
+  // 📓 دفترچه‌ی عادت‌ها
+  clean.journals = {};
+  if (s.journals && typeof s.journals === "object") {
+    for (var jk in s.journals) {
+      if (!/^\d+$/.test(jk) || !s.journals[jk] || typeof s.journals[jk] !== "object") continue;
+      var jday = {};
+      for (var jdk in s.journals[jk]) {
+        if (/^\d{4}-\d{2}-\d{2}$/.test(jdk) && typeof s.journals[jk][jdk] === "string" && s.journals[jk][jdk].trim() && s.journals[jk][jdk].length <= 500) {
+          jday[jdk] = s.journals[jk][jdk];
+        }
+      }
+      if (Object.keys(jday).length) clean.journals[jk] = jday;
     }
   }
   markDirty();
@@ -2594,9 +3526,10 @@ $("addForm").addEventListener("submit", function (e) {
     return;
   }
   var input = $("taskInput");
-  var res = addTask(input.value, chipSelection.due);
+  var res = addTask(input.value, chipSelection.due, $("slotSelect").value);
   if (res.ok) {
     input.value = "";
+    $("slotSelect").value = "";
     input.focus();
     showToast(res.msg);
     onChipClick("today");
