@@ -5361,7 +5361,7 @@ function switchTab(tab) {
 
 /* ==================# ☁️ لایه ابری (Firebase) #================== */
 
-var CLOUD = { ok: false, inited: false, uid: null, me: null, friends: {}, lb: "day", pushT: null, rooms: {}, feed: [], pollT: null, warned: false };
+var CLOUD = { ok: false, inited: false, uid: null, me: null, friends: {}, lb: "day", pushT: null, rooms: {}, feed: [], pollT: null, warned: false, lastPush: null };
 
 var CLOUD_CFG = { apiKey: "AIzaSyBOehoq13MT296i41UMbd0d39hnQHwZ6FI", authDomain: "karhaye-roozane.firebaseapp.com", projectId: "karhaye-roozane", appId: "1:388429335273:web:162787fc71faf67b703e78" };
 
@@ -5411,7 +5411,7 @@ function cloudInit() {
   cloudSetStatus("☁️ ورود…");
   CLOUD.auth.onAuthStateChanged(function (u) {
     if (!u) {
-      CLOUD.ok = false; CLOUD.uid = null; CLOUD.me = null;
+      CLOUD.ok = false; CLOUD.uid = null; CLOUD.me = null; CLOUD.lastPush = null;
       if (CLOUD.pollT) { clearInterval(CLOUD.pollT); CLOUD.pollT = null; }
       ACCOUNT.user = null;
       renderAccount();
@@ -5435,6 +5435,7 @@ function cloudInit() {
 function cloudAttachUser(u) {
   if (!CLOUD.db || !u) return;
   CLOUD.uid = u.uid;
+  CLOUD.lastPush = null;
   var ref = CLOUD.db.collection("users").doc(u.uid);
   ref.get().then(function (d) {
     if (d.exists) {
@@ -5961,6 +5962,10 @@ function cloudPush(force) {
   CLOUD.me.privacy = patch.privacy;
   if (!CLOUD.me.days) CLOUD.me.days = {};
   CLOUD.me.days[today] = day;
+  // پولینگ ۲۰ثانیه‌ای فقط وقتی می‌نویسد که چیزی عوض شده باشد (صرفه‌جویی در سهمیه)
+  var pushKey = JSON.stringify([patch, pv]);
+  if (!force && CLOUD.lastPush === pushKey) { renderCloudStats(); return; }
+  CLOUD.lastPush = pushKey;
   CLOUD.db.collection("users").doc(CLOUD.uid).set(patch, { merge: true }).catch(function () {});
   // نسخه‌ی عمومی و کم‌داده؛ هر فیلد فقط با اجازه‌ی جداگانه‌ی کاربر منتشر می‌شود
   var pubRef = CLOUD.db.collection("publicProfiles").doc(CLOUD.uid);
@@ -6426,7 +6431,7 @@ function renderCloud() {
 
 var BACKUP_APP = "karhaye-roozane";
 var BACKUP_VER = 2;
-var APP_VER = "3.4.0";
+var APP_VER = "3.4.1";
 var pendingImport = null;
 var importTries = 0;
 
