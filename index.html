@@ -3298,8 +3298,11 @@ $("friendAdd").addEventListener("click", function () {
 // تنظیمات اجتماعی جدا از داده‌ی شخصی؛ در حافظه‌ی محلی نگه داشته می‌شود
 var SOCIAL_KEY = "dailyTasksApp_social";
 
+// دیتابیس پیش‌فرض چالش مشترک لایو (ساخته‌شده توسط مهندس رسول شیرازی)
+var LIVE_DB_URL = "https://karhaye-roozane-default-rtdb.firebaseio.com";
+
 function loadSocial() {
-  var d = { dbUrl: "", myName: "", myId: null, room: null };
+  var d = { dbUrl: LIVE_DB_URL, myName: "", myId: null, room: null };
   try {
     var raw = window.localStorage.getItem(SOCIAL_KEY);
     if (raw) {
