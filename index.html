@@ -947,7 +947,7 @@
   <div class="tabsec" id="tabClub" style="display:none">
   <div class="card">
     <h2 class="section-title">☁️ باشگاه ابری <span id="cloudStatus" style="font-size:.7rem;color:var(--muted)">در حال اتصال…</span></h2>
-    <p class="card-hint">جدول رتبه‌ی واقعی بین دوستات، فید فعالیت و چالش دونفره — همه با Firebase. فقط اسم، آواتار و امتیاز آپلود می‌شه 🔐</p>
+    <p class="card-hint">جدول رتبه‌ی واقعی بین دوستات، فید فعالیت و چالش دونفره — همه با Firebase. فقط داده‌ی لازم برای رتبه و فید آپلود می‌شه؛ عنوان کارهات هرگز 🔐</p>
     <div class="pf-stats" id="cloudStats"></div>
     <div class="lb-tabs" id="lbTabs" style="display:none">
       <button type="button" class="lb-tab active" data-lb="day">روزانه</button>
@@ -966,6 +966,7 @@
     <div id="cloudRooms"></div>
     <h2 class="section-title" style="margin-top:14px">💬 فید دوستان</h2>
     <div id="cloudFeed"></div>
+    <div id="cloudBlocked" style="margin-top:10px"></div>
   </div>
 
   <div class="card">
@@ -5058,13 +5059,15 @@ function renderCat() {
   var wrap = document.createElement("div");
   wrap.className = "cat-art";
   var img = document.createElement("img");
-  img.src = "cat-stage-" + (stage + 1 < 10 ? "0" + (stage + 1) : String(stage + 1)) + ".jpg";
+  var catBase = "cat-stage-" + (stage + 1 < 10 ? "0" + (stage + 1) : String(stage + 1));
+  img.src = catBase + ".webp";
   img.alt = CAT_STAGES[stage].name;
   img.decoding = "async";
-  img.loading = "lazy";
+  img.loading = "eager";
   img.width = 300;
   img.height = 220;
   img.onerror = function () {
+    if (!img.dataset.fb) { img.dataset.fb = "1"; img.src = catBase + ".jpg"; return; }
     wrap.textContent = "";
     wrap.innerHTML = catSvg(stage, { toys: cat.toys, sleeping: cat.e < 15 });
   };
@@ -5450,12 +5453,13 @@ function cloudAttachUser(u) {
       CLOUD.me = { name: (state.myName || "کاربر").slice(0, 40), av: (state.profile && state.profile.av) || "😺", col: (state.profile && state.profile.col) || "#6366f1", invite: cloudInviteCode(u.uid), friends: [], xp: 0, day: 0, week: 0, days: {}, privacy: { share: state.privacy.share !== false }, cat: cloudCatBits(), created: Date.now() };
       ref.set(CLOUD.me).then(function () {
         // ثبت کد دعوت برای جستجو
-        CLOUD.db.collection("invites").doc(CLOUD.me.invite).set({ uid: u.uid }).catch(function () {});
+        CLOUD.db.collection("invites").doc(CLOUD.me.invite).set({ uid: u.uid, exp: Date.now() + 30 * 86400000 }).catch(function () {});
       }).catch(function () {});
     }
     CLOUD.ok = true;
     cloudSetStatus("☁️ آنلاین ✅");
     cloudPush(true);
+    cloudRenewInvite();
     cloudEnsureFriendLinks();
     cloudLoadFriends();
     cloudMigrateLegacyFeed();
@@ -5464,6 +5468,15 @@ function cloudAttachUser(u) {
     cloudStartPoll();
     cloudHandleParam();
   }).catch(function (e) { cloudSetStatus("☁️ خطا: " + (e.code || "").replace("permission-denied", "اجازه نیست")); });
+}
+
+// کد دعوت با تاریخ انقضا؛ هر بار ورود تا ۳۰ روز دیگر تمدید می‌شود
+function cloudRenewInvite() {
+  if (!CLOUD.ok || !CLOUD.me || !CLOUD.me.invite) return;
+  CLOUD.db.collection("invites").doc(CLOUD.me.invite).set({
+    uid: CLOUD.uid,
+    exp: Date.now() + 30 * 86400000
+  }, { merge: true }).catch(function () {});
 }
 
 /* ---- حساب کاربری واقعی (ایمیل/گوگل) + اتصال مهمان ---- */
@@ -5808,6 +5821,8 @@ function acctWipeCloud(u, invite) {
   jobs.push(safe(acctDeleteQuery(db.collection("feed").doc(u.uid).collection("posts"), 50), "posts"));
   // پست‌های فید قدیمی سطح‌بالا
   jobs.push(safe(acctDeleteQuery(db.collection("feed").where("uid", "==", u.uid), 50), "legacy"));
+  // گزارش‌هایی که خودم ثبت کرده‌ام (Rules فقط به خود گزارش‌دهنده اجازه می‌دهد)
+  jobs.push(safe(acctDeleteQuery(db.collection("reports").where("by", "==", u.uid), 50), "reports"));
   // اتاق‌هایی که میزبانشان این کاربر است
   jobs.push(safe(acctEachQuery(db.collection("rooms").where("h", "==", u.uid), function (d) {
     return d.ref.delete();
@@ -6020,7 +6035,9 @@ function cloudAddFriendByCode() {
   CLOUD.db.collection("invites").doc(code).get().then(function (iv) {
     cloudSetStatus("☁️ آنلاین ✅");
     if (!iv.exists) { showToast("کسی با این کد پیدا نشد 🤷"); return; }
-    var fid = iv.data().uid;
+    var ivd = iv.data() || {};
+    if (typeof ivd.exp === "number" && ivd.exp < Date.now()) { showToast("این کد دعوت منقضی شده — از دوستت کد تازه بگیر ⌛"); return; }
+    var fid = ivd.uid;
     if (!fid || CLOUD.me.friends.indexOf(fid) !== -1) { showToast("این دوست قبلاً اضافه شده ✔"); return; }
     CLOUD.me.friends.push(fid);
     var linkPatch = { links: {} };
@@ -6036,22 +6053,87 @@ function cloudAddFriendByCode() {
   }).catch(function () { cloudSetStatus("☁️ آنلاین ✅"); showToast("جستجو ناموفق بود ❌"); });
 }
 
-function cloudRemoveFriend(fid) {
-  if (!CLOUD.ok || !CLOUD.me || !fid) return;
-  if (!window.confirm("این دوست از لیست حذف شود؟ دیگر فید هم را نمی‌بینید.")) return;
+function cloudRemoveFriend(fid, quiet) {
+  if (!CLOUD.ok || !CLOUD.me || !fid) return Promise.resolve();
+  if (!quiet && !window.confirm("این دوست از لیست حذف شود؟ دیگر فید هم را نمی‌بینید.")) return Promise.resolve();
   var left = (CLOUD.me.friends || []).filter(function (x) { return x !== fid; });
   var patch = {};
   patch["links." + fid] = firebase.firestore.FieldValue.delete();
-  Promise.all([
+  return Promise.all([
     CLOUD.db.collection("users").doc(CLOUD.uid).set({ friends: left }, { merge: true }),
-    CLOUD.db.collection("friendships").doc(CLOUD.uid).update(patch)
+    CLOUD.db.collection("friendships").doc(CLOUD.uid).update(patch).catch(function () {})
   ]).then(function () {
     CLOUD.me.friends = left;
     delete CLOUD.friends[fid];
     renderCloud();
     cloudLoadFriendsFeed();
-    showToast("دوست حذف شد");
-  }).catch(function () { showToast("حذف دوست ناموفق بود ❌"); });
+    if (!quiet) showToast("دوست حذف شد");
+  }).catch(function () { if (!quiet) showToast("حذف دوست ناموفق بود ❌"); });
+}
+
+// مسدودکردن: فید قطع می‌شود (Rules هم دوطرفه چک می‌کند) و دوستی برداشته می‌شود
+function cloudBlockUser(uid, name) {
+  if (!CLOUD.ok || !CLOUD.me || !uid || uid === CLOUD.uid) return;
+  var nm = (name || "این کاربر").slice(0, 40);
+  if (!window.confirm("«" + nm + "» مسدود شود؟\nفید و پست‌هایش دیگر نمایش داده نمی‌شود و از دوستانت حذف می‌شود.")) return;
+  var left = (CLOUD.me.friends || []).filter(function (x) { return x !== uid; });
+  var patch = { friends: left };
+  patch["blocked." + uid] = true;
+  patch["blockedNames." + uid] = nm;
+  CLOUD.db.collection("users").doc(CLOUD.uid).set(patch, { merge: true }).then(function () {
+    CLOUD.me.friends = left;
+    if (!CLOUD.me.blocked) CLOUD.me.blocked = {};
+    if (!CLOUD.me.blockedNames) CLOUD.me.blockedNames = {};
+    CLOUD.me.blocked[uid] = true;
+    CLOUD.me.blockedNames[uid] = nm;
+    delete CLOUD.friends[uid];
+    var linkPatch = {};
+    linkPatch["links." + uid] = firebase.firestore.FieldValue.delete();
+    return CLOUD.db.collection("friendships").doc(CLOUD.uid).update(linkPatch).catch(function () {});
+  }).then(function () {
+    renderCloud();
+    cloudLoadFriendsFeed();
+    showToast("«" + nm + "» مسدود شد 🚫");
+  }).catch(function () { showToast("مسدودکردن ناموفق بود ❌"); });
+}
+
+function cloudUnblockUser(uid) {
+  if (!CLOUD.ok || !CLOUD.me || !uid) return;
+  var patch = {};
+  patch["blocked." + uid] = firebase.firestore.FieldValue.delete();
+  patch["blockedNames." + uid] = firebase.firestore.FieldValue.delete();
+  CLOUD.db.collection("users").doc(CLOUD.uid).set(patch, { merge: true }).then(function () {
+    if (CLOUD.me.blocked) delete CLOUD.me.blocked[uid];
+    if (CLOUD.me.blockedNames) delete CLOUD.me.blockedNames[uid];
+    renderCloud();
+    showToast("رفع مسدودی انجام شد");
+  }).catch(function () { showToast("رفع مسدودی ناموفق بود ❌"); });
+}
+
+function cloudReportPost(owner, pid) {
+  if (!CLOUD.ok || !owner || !pid) return;
+  var reason = window.prompt("دلیل گزارش این پست را بنویس (فقط برای بررسی):", "");
+  if (reason == null) return;
+  reason = reason.trim().slice(0, 200);
+  if (reason.length < 3) { showToast("دلیل خیلی کوتاه است ❌"); return; }
+  CLOUD.db.collection("reports").add({
+    by: CLOUD.uid,
+    target: owner,
+    pid: pid,
+    reason: reason,
+    t: Date.now()
+  }).then(function () { showToast("گزارش ثبت شد ✅ بررسی می‌شود"); })
+    .catch(function () { showToast("ثبت گزارش ناموفق بود ❌"); });
+}
+
+function cloudDeletePost(owner, pid) {
+  if (!CLOUD.ok || owner !== CLOUD.uid || !pid) return;
+  if (!window.confirm("این پست از فیدت حذف شود؟")) return;
+  CLOUD.db.collection("feed").doc(owner).collection("posts").doc(pid).delete().then(function () {
+    CLOUD.feed = (CLOUD.feed || []).filter(function (x) { return !(x.owner === owner && x.id === pid); });
+    renderCloudFeed();
+    showToast("پست حذف شد 🗑");
+  }).catch(function () { showToast("حذف پست ناموفق بود ❌"); });
 }
 
 function cloudCopyMyCode() {
@@ -6080,18 +6162,20 @@ function cloudCreateChallenge() {
 
 function cloudJoinChallenge(id) {
   if (!CLOUD.ok) return;
-  CLOUD.db.collection("rooms").doc(id).get().then(function (d) {
-    if (!d.exists) { showToast("چالش پیدا نشد ❌"); return; }
-    var r = d.data();
-    if (r.h === CLOUD.uid) { /* میزبان */ }
-    else if (!r.g) {
-      CLOUD.db.collection("rooms").doc(id).update({ g: CLOUD.uid, gnn: (state.myName || "کاربر").slice(0, 40), gav: (state.profile && state.profile.av) || "😺" }).catch(function () {});
-      r.g = CLOUD.uid;
-      showToast("به چالش پیوستی! ⚔️");
-    }
-    CLOUD.rooms[id] = r;
-    renderCloud();
-  }).catch(function () { showToast("ورود به چالش ناموفق بود ❌"); });
+  var roomRef = CLOUD.db.collection("rooms").doc(id);
+  function enter(r) { CLOUD.rooms[id] = r; renderCloud(); }
+  // اگر عضو باشم، خواندن آزاد است؛ اگر نه، Rules خواندن را می‌بندد
+  roomRef.get().then(function (d) {
+    if (d.exists) { enter(d.data()); showToast("تو عضو این چالش هستی ⚔️"); }
+  }).catch(function () {
+    // Rules خواندن اتاق را فقط برای اعضا می‌دهد؛ پس با یک update اتمی عضو می‌شوم
+    roomRef.update({ g: CLOUD.uid, gnn: (state.myName || "کاربر").slice(0, 40), gav: (state.profile && state.profile.av) || "😺" }).then(function () {
+      return roomRef.get();
+    }).then(function (d) {
+      if (d.exists) { showToast("به چالش پیوستی! ⚔️"); enter(d.data()); }
+      else showToast("چالش پیدا نشد ❌");
+    }).catch(function () { showToast("ورود به چالش ناموفق بود — لینک را از میزبان تازه بگیر ❌"); });
+  });
 }
 
 function cloudHandleParam() {
@@ -6145,13 +6229,15 @@ function cloudFeedPost(txt) {
 function cloudLoadFriendsFeed() {
   if (!CLOUD.ok || !CLOUD.me) return;
   var jobs = [];
+  var blocks = CLOUD.me.blocked || {};
   function loadOne(owner) {
+    if (owner !== CLOUD.uid && blocks[owner]) return Promise.resolve([]);
     return CLOUD.db.collection("feed").doc(owner).collection("posts").orderBy("t", "desc").limit(20).get().then(function (qs) {
       return qs.docs.map(function (d) { var v = d.data(); v.id = d.id; v.owner = owner; return v; });
     }).catch(function () { return []; });
   }
   jobs.push(loadOne(CLOUD.uid));
-  var fids = (CLOUD.me.friends || []).slice(0, 50);
+  var fids = (CLOUD.me.friends || []).filter(function (fid) { return !blocks[fid]; }).slice(0, 50);
   for (var i = 0; i < fids.length; i++) jobs.push(loadOne(fids[i]));
   Promise.all(jobs).then(function (arrs) {
     var seen = {};
@@ -6246,8 +6332,10 @@ function renderCloudLb() {
   box.textContent = "";
   if (!CLOUD.ok) return;
   var rows = [];
+  var blocksLb = CLOUD.me.blocked || {};
   if (CLOUD.me) rows.push({ name: state.myName || "من", av: (state.profile && state.profile.av) || "😺", col: (state.profile && state.profile.col) || "#6366f1", me: true, v: CLOUD.lb === "day" ? (CLOUD.me.day || 0) : CLOUD.lb === "week" ? (CLOUD.me.week || 0) : cloudMonthScore() });
   for (var fid in CLOUD.friends) {
+    if (blocksLb[fid]) continue;
     var f = CLOUD.friends[fid];
     if (f.hidden) { rows.push({ name: "خصوصی", av: "🔒", col: "#94a3b8", me: false, v: null, fid: fid }); continue; }
     var fv = f.day != null ? (CLOUD.lb === "day" ? (f.day || 0) : CLOUD.lb === "week" ? (f.week || 0) : (f.days ? cloudSumMonth(f.days) : 0)) : null;
@@ -6378,8 +6466,10 @@ function renderCloudFeed() {
     return;
   }
   var RE = ["💪", "❤️", "🔥", "🎉"];
+  var blocksFeed = CLOUD.me.blocked || {};
   for (var i = 0; i < CLOUD.feed.length; i++) {
     var f = CLOUD.feed[i];
+    if (f.owner !== CLOUD.uid && blocksFeed[f.owner]) continue;
     var row = document.createElement("div");
     row.className = "feed-row";
     var head = document.createElement("div");
@@ -6388,6 +6478,21 @@ function renderCloudFeed() {
     var who = document.createElement("span"); who.className = "feed-who"; who.textContent = f.name || "دوست";
     var when = document.createElement("span"); when.className = "feed-when"; when.textContent = timeAgoTxt(f.t || Date.now());
     head.appendChild(av); head.appendChild(who); head.appendChild(when);
+    var actStyle = "border:0;background:transparent;color:var(--muted);font-size:.85rem;padding:2px 4px;cursor:pointer";
+    if (f.owner === CLOUD.uid) {
+      var delBtn = document.createElement("button");
+      delBtn.type = "button"; delBtn.textContent = "🗑"; delBtn.title = "حذف پست خودم"; delBtn.style.cssText = actStyle;
+      (function (o, p) { delBtn.addEventListener("click", function () { cloudDeletePost(o, p); }); })(f.owner, f.id);
+      head.appendChild(delBtn);
+    } else {
+      var blkBtn = document.createElement("button");
+      blkBtn.type = "button"; blkBtn.textContent = "🚫"; blkBtn.title = "مسدودکردن"; blkBtn.style.cssText = actStyle;
+      (function (o, nm) { blkBtn.addEventListener("click", function () { cloudBlockUser(o, nm); }); })(f.owner, f.name);
+      var repBtn = document.createElement("button");
+      repBtn.type = "button"; repBtn.textContent = "⚠️"; repBtn.title = "گزارش پست"; repBtn.style.cssText = actStyle;
+      (function (o, p) { repBtn.addEventListener("click", function () { cloudReportPost(o, p); }); })(f.owner, f.id);
+      head.appendChild(blkBtn); head.appendChild(repBtn);
+    }
     var txt = document.createElement("div"); txt.className = "feed-txt"; txt.textContent = f.txt || "";
     var reactRow = document.createElement("div"); reactRow.className = "feed-reacts";
     var re = f.re || {};
@@ -6416,6 +6521,32 @@ function cloudFeedOffline() {
   return d;
 }
 
+function renderCloudBlocked() {
+  var box = $("cloudBlocked");
+  if (!box) return;
+  box.textContent = "";
+  if (!CLOUD.ok || !CLOUD.me) return;
+  var blocked = CLOUD.me.blocked || {};
+  var keys = Object.keys(blocked);
+  if (!keys.length) return;
+  var title = document.createElement("div");
+  title.className = "card-hint";
+  title.textContent = "🚫 کاربران مسدود — فیدشان نمایش داده نمی‌شود";
+  box.appendChild(title);
+  keys.forEach(function (uid) {
+    var row = document.createElement("div");
+    row.className = "lb-row";
+    var nm = document.createElement("span");
+    nm.className = "lb-name";
+    nm.textContent = (CLOUD.me.blockedNames && CLOUD.me.blockedNames[uid]) || "کاربر";
+    var btn = document.createElement("button");
+    btn.type = "button"; btn.className = "mis-btn"; btn.textContent = "رفع مسدودی";
+    btn.addEventListener("click", function () { cloudUnblockUser(uid); });
+    row.appendChild(nm); row.appendChild(btn);
+    box.appendChild(row);
+  });
+}
+
 function renderCloud() {
   if (!$("cloudLb")) return;
   var tabs = $("lbTabs");
@@ -6427,6 +6558,7 @@ function renderCloud() {
   renderCloudLb();
   renderCloudRooms();
   renderCloudFeed();
+  renderCloudBlocked();
 }
 
 /* ==================# پشتیبان‌گیری #================== */
@@ -6435,7 +6567,7 @@ function renderCloud() {
 
 var BACKUP_APP = "karhaye-roozane";
 var BACKUP_VER = 2;
-var APP_VER = "3.4.3";
+var APP_VER = "3.4.4";
 var pendingImport = null;
 var importTries = 0;
 
