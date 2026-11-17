@@ -47,3 +47,12 @@ jobs:
           name: Karhaye Roozane Android
           body: Latest APK built from the web app.
           files: karhaye-roozane.apk
+
+      - name: Update APK on site
+        continue-on-error: true
+        run: |
+          git config user.name github-actions
+          git config user.email actions@github.com
+          git add karhaye-roozane.apk
+          git commit -m "Update site APK (auto)" || echo "no changes"
+          git push
