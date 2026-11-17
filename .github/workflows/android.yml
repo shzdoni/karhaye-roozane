@@ -1,0 +1,45 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "android-project.zip"
+      - ".github/workflows/android.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.7"
+
+      - name: Unzip project
+        run: unzip -q android-project.zip -d build-src && ls build-src
+
+      - name: Build debug APK
+        run: gradle -p build-src/android-project assembleDebug --no-daemon
+
+      - name: Collect APK
+        run: cp build-src/android-project/app/build/outputs/apk/debug/app-debug.apk karhaye-roozane.apk
+
+      - name: Publish APK to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-latest
+          name: Karhaye Roozane Android
+          body: Latest APK built from the web app.
+          files: karhaye-roozane.apk
