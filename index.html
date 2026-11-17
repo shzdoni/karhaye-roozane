@@ -553,6 +553,12 @@
     border: 2px solid #f3e8d3; border-radius: 18px; padding: 6px 6px 0; position: relative; overflow: hidden;
   }
   .cat-stage-wrap svg { display: block; width: 100%; height: auto; max-height: 250px; }
+  .cat-art { position: relative; }
+  .cat-art img { display: block; width: 100%; height: auto; max-height: 250px; object-fit: cover; border-radius: 12px; }
+  .cat-art img.cat-art-sleep { filter: saturate(.8) brightness(.97); }
+  .cat-zzz { position: absolute; top: 8px; left: 8px; font-size: 1.05rem; background: rgba(255,255,255,.72); border-radius: 10px; padding: 1px 7px; }
+  .cat-toys { position: absolute; bottom: 8px; right: 8px; display: flex; gap: 4px; }
+  .cat-toys span { font-size: 1.05rem; background: rgba(255,255,255,.75); border-radius: 10px; padding: 1px 6px; }
   .cat-fx { position: absolute; font-size: 1.3rem; pointer-events: none; animation: floatUp 1.3s ease forwards; }
   .cat-name-row { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
   .cat-stat { display: flex; align-items: center; gap: 8px; margin-top: 7px; }
@@ -4587,19 +4593,25 @@ var TOYS = [
 ];
 
 var CAT_STAGES = [
-  { name: "بچه‌گربه نجات‌یافته", hint: "ضعیف و گرسنه — با مراقبت جان می‌گیره" },
-  { name: "در حال بهبود", hint: "کم‌کم جان می‌گیره؛ به مراقبت ادامه بده" },
-  { name: "سالم و بانمک", hint: "موهاش برق می‌زنه! بازیگوش شده" },
-  { name: "گربه بالغِ زیبا", hint: "سالم، خوشگل و عاشق تو" }
+  { name: "بچه‌گربهٔ نجاتیافته", hint: "ضعیف و گرسنه — با مراقبت جان می‌گیرد" },
+  { name: "در حال بهبود", hint: "آرام‌آرام قوی می‌شود؛ به مراقبت ادامه بده" },
+  { name: "بانمک و کنجکاو", hint: "موهایش برق می‌زند و سرحال شده" },
+  { name: "بازیگوش", hint: "پرانرژی و شیطون؛ عاشق بازی" },
+  { name: "خوش‌پوش", hint: "مرتب و آراسته با یقهٔ آبی" },
+  { name: "نازنازی", hint: "لوس و شکمو؛ عاشق بالش نرم" },
+  { name: "ماجراجو", hint: "دلش می‌خواهد دنیا را ببیند" },
+  { name: "شاهزادهٔ خانه", hint: "تاج گذاشته و فرمانروایی می‌کند" },
+  { name: "گربهٔ جادویی", hint: "هاله‌ای جادویی دورش می‌درخشد" },
+  { name: "گربهٔ افسانه‌ای", hint: "باشکوه‌ترین شکل ممکن؛ افسانه شد!" }
 ];
+var CAT_STAGE_AT = [20, 30, 40, 50, 59, 68, 76, 84, 92];
 
 function catAvg(cat) { return (cat.h + cat.e + cat.j + cat.c) / 4; }
 function catStage(cat) {
   var a = catAvg(cat);
-  if (a < 28) return 0;
-  if (a < 58) return 1;
-  if (a < 82) return 2;
-  return 3;
+  var s = 0;
+  for (var i = 0; i < CAT_STAGE_AT.length; i++) if (a >= CAT_STAGE_AT[i]) s = i + 1;
+  return s;
 }
 
 function ensureCat() {
@@ -4725,12 +4737,40 @@ function renderCat() {
   var cat = state.cat;
   var stage = catStage(cat);
   $("catNameTxt").textContent = cat.name ? cat.name : "گربه من";
-  $("catStageLbl").textContent = "مرحله " + toFa(stage + 1) + " از ۴: " + CAT_STAGES[stage].name + " — " + CAT_STAGES[stage].hint;
+  $("catStageLbl").textContent = "مرحله " + toFa(stage + 1) + " از " + toFa(CAT_STAGES.length) + ": " + CAT_STAGES[stage].name + " — " + CAT_STAGES[stage].hint;
   var arena = $("catArena");
   arena.textContent = "";
   var wrap = document.createElement("div");
-  wrap.innerHTML = catSvg(stage, { toys: cat.toys, sleeping: cat.e < 15 });
-  arena.appendChild(wrap.firstChild || wrap);
+  wrap.className = "cat-art";
+  var img = document.createElement("img");
+  img.src = "cat-stage-" + (stage + 1 < 10 ? "0" + (stage + 1) : String(stage + 1)) + ".jpg";
+  img.alt = CAT_STAGES[stage].name;
+  img.decoding = "async";
+  img.onerror = function () {
+    wrap.textContent = "";
+    wrap.innerHTML = catSvg(stage, { toys: cat.toys, sleeping: cat.e < 15 });
+  };
+  wrap.appendChild(img);
+  if (cat.e < 15) {
+    img.className = "cat-art-sleep";
+    var zz = document.createElement("span");
+    zz.className = "cat-zzz";
+    zz.textContent = "💤";
+    wrap.appendChild(zz);
+  }
+  var ownedToys = cat.toys || [];
+  if (ownedToys.length) {
+    var tb = document.createElement("div");
+    tb.className = "cat-toys";
+    for (var ti = 0; ti < TOYS.length; ti++) {
+      if (ownedToys.indexOf(TOYS[ti].id) === -1) continue;
+      var chip = document.createElement("span");
+      chip.textContent = TOYS[ti].icon;
+      tb.appendChild(chip);
+    }
+    if (tb.childNodes.length) wrap.appendChild(tb);
+  }
+  arena.appendChild(wrap);
   // آمار
   var st = $("catStats");
   st.textContent = "";
