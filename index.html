@@ -5702,6 +5702,7 @@ function acctWipeCloud(u, invite) {
   var db = CLOUD.db;
   var jobs = [];
   jobs.push(db.collection("users").doc(u.uid).delete());
+  jobs.push(db.collection("publicProfiles").doc(u.uid).delete());
   if (invite) jobs.push(db.collection("invites").doc(invite).delete());
   jobs.push(db.collection("feed").where("uid", "==", u.uid).limit(100).get().then(function (qs) {
     return Promise.all(qs.docs.map(function (d) { return d.ref.delete(); }));
@@ -5825,17 +5826,29 @@ function cloudPush(force) {
   if (!CLOUD.me.days) CLOUD.me.days = {};
   CLOUD.me.days[today] = day;
   CLOUD.db.collection("users").doc(CLOUD.uid).set(patch, { merge: true }).catch(function () {});
+  // نسخه‌ی عمومی و کم‌داده برای جدول/دوستان؛ فهرست دوستان، کد دعوت و داده‌های خصوصی اینجا نیست
+  var pubRef = CLOUD.db.collection("publicProfiles").doc(CLOUD.uid);
+  if (state.privacy.share === false) {
+    pubRef.delete().catch(function () {});
+  } else {
+    var pub = { name: patch.name, av: patch.av, col: patch.col, day: patch.day, week: patch.week, privacy: patch.privacy, cat: patch.cat, seen: patch.seen };
+    pub["days." + today] = day;
+    pubRef.set(pub, { merge: true }).catch(function () {});
+  }
   renderCloudStats();
 }
 
-// دوستان: کد دعوت → uid → خواندن doc
+// دوستان: کد دعوت → uid → خواندن پروفایل عمومی (بدون داده‌های خصوصی)
 function cloudLoadFriends() {
   if (!CLOUD.ok || !CLOUD.me) return;
   var fids = CLOUD.me.friends || [];
   CLOUD.friends = {};
   fids.forEach(function (fid) {
-    CLOUD.db.collection("users").doc(fid).get().then(function (d) {
-      if (d.exists) { CLOUD.friends[fid] = d.data(); renderCloud(); }
+    CLOUD.db.collection("publicProfiles").doc(fid).get().then(function (d) {
+      if (d.exists) { CLOUD.friends[fid] = d.data(); renderCloud(); return; }
+      return CLOUD.db.collection("users").doc(fid).get().then(function (d2) {
+        if (d2.exists) { CLOUD.friends[fid] = d2.data(); renderCloud(); }
+      });
     }).catch(function () { CLOUD.friends[fid] = { name: "خصوصی 🔒", hidden: true }; renderCloud(); });
   });
 }
@@ -6173,7 +6186,7 @@ function renderCloud() {
 
 var BACKUP_APP = "karhaye-roozane";
 var BACKUP_VER = 2;
-var APP_VER = "3.2";
+var APP_VER = "3.3";
 var pendingImport = null;
 var importTries = 0;
 
