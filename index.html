@@ -661,6 +661,7 @@
   .modal-actions { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
   .modal-actions button { flex: 1; min-width: 90px; border: none; border-radius: 10px; padding: 9px 8px; font-family: inherit; font-size: .8rem; cursor: pointer; }
   #impCancel { background: #f1f5f9; color: var(--muted); }
+  #impUnlock { background: var(--primary); color: #fff; }
   #impMerge { background: var(--primary); color: #fff; }
   #impReplace { background: #fee2e2; color: #991b1b; }
   #impPin { width: 100%; border: 2px solid var(--border); border-radius: 10px; padding: 10px; text-align: center; direction: ltr; letter-spacing: 4px; font-size: 1.05rem; font-family: inherit; box-sizing: border-box; outline: none; }
@@ -1129,6 +1130,7 @@
       </div>
       <div class="modal-actions" id="impActions">
         <button type="button" id="impCancel">انصراف</button>
+        <button type="button" id="impUnlock" style="display:none">🔓 باز کن</button>
         <button type="button" id="impMerge">✅ ادغام کن</button>
         <button type="button" id="impReplace">♻️ جایگزینی کامل</button>
       </div>
@@ -6431,7 +6433,7 @@ function renderCloud() {
 
 var BACKUP_APP = "karhaye-roozane";
 var BACKUP_VER = 2;
-var APP_VER = "3.4.1";
+var APP_VER = "3.4.2";
 var pendingImport = null;
 var importTries = 0;
 
@@ -6605,6 +6607,7 @@ function openImportModal(kind) {
   $("impErr").textContent = "";
   $("impPin").value = "";
   $("impPinWrap").style.display = kind === "pin" ? "block" : "none";
+  $("impUnlock").style.display = kind === "pin" ? "inline-block" : "none";
   $("impMerge").style.display = kind === "pin" ? "none" : "inline-block";
   $("impReplace").style.display = kind === "pin" ? "none" : "inline-block";
   $("impActions").style.display = "flex";
@@ -6789,6 +6792,7 @@ function tryImportPin() {
     importTries = 0;
     renderImportPreview();
     $("impPinWrap").style.display = "none";
+    $("impUnlock").style.display = "none";
     $("impMerge").style.display = "inline-block";
     $("impReplace").style.display = "inline-block";
     $("impTitle").textContent = "پیش‌نمایش بازیابی (رمزگشایی شد)";
@@ -7460,6 +7464,7 @@ $("exportBtn2").addEventListener("click", exportData);
 $("importBtn2").addEventListener("click", function () { $("importFile").click(); });
 $("quotaWarnBtn").addEventListener("click", exportData);
 $("impCancel").addEventListener("click", closeImportModal);
+$("impUnlock").addEventListener("click", tryImportPin);
 $("impMerge").addEventListener("click", mergeImport);
 $("impReplace").addEventListener("click", replaceImport);
 $("impPin").addEventListener("keydown", function (e) {
