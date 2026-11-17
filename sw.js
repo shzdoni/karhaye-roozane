@@ -1,9 +1,17 @@
-var CACHE = "karhaye-roozane-v1";
+var CACHE = "karhaye-roozane-v2";
 var CORE = ["./", "./index.html", "./manifest.webmanifest", "./icon.svg"];
+var ART = [];
+for (var i = 1; i <= 10; i++) ART.push("./cat-stage-" + (i < 10 ? "0" + i : i) + ".jpg");
 
 self.addEventListener("install", function (e) {
   self.skipWaiting();
-  e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(CORE); }).catch(function () {}));
+  e.waitUntil(
+    caches.open(CACHE).then(function (c) {
+      return c.addAll(CORE).catch(function () {}).then(function () {
+        return Promise.all(ART.map(function (u) { return c.add(u).catch(function () {}); }));
+      });
+    })
+  );
 });
 
 self.addEventListener("activate", function (e) {
@@ -14,7 +22,7 @@ self.addEventListener("activate", function (e) {
   );
 });
 
-// Network-first: همیشه نسخه‌ی تازه می‌آید، آفلاین از کش
+// Network-first: همیشه نسخه‌ی تازه می‌آید (با رد کردن کش HTTP)، آفلاین از کش
 self.addEventListener("fetch", function (e) {
   var req = e.request;
   if (req.method !== "GET") return;
@@ -22,7 +30,7 @@ self.addEventListener("fetch", function (e) {
   try { u = new URL(req.url); } catch (err) { return; }
   if (u.origin !== location.origin) return;
   e.respondWith(
-    fetch(req).then(function (res) {
+    fetch(req, { cache: "reload" }).then(function (res) {
       if (res && res.ok) {
         var copy = res.clone();
         caches.open(CACHE).then(function (c) { c.put(req, copy); }).catch(function () {});

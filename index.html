@@ -6336,8 +6336,13 @@ if (bootEncrypted) {
   switchTab(state.tab || "home");
   loadFirebase(); // ☁️ اتصال Firebase (آفلاین بی‌ضرر)
   if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
+    var hadSwController = !!navigator.serviceWorker.controller;
+    var swReloaded = false;
+    navigator.serviceWorker.addEventListener("controllerchange", function () {
+      if (hadSwController && !swReloaded) { swReloaded = true; location.reload(); }
+    });
     window.addEventListener("load", function () {
-      navigator.serviceWorker.register("./sw.js").catch(function () {});
+      navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).catch(function () {});
     });
   }
 })();
