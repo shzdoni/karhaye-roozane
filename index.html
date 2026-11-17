@@ -2,7 +2,7 @@
 <html lang="fa" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-visual">
 <meta name="theme-color" content="#4f46e5">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -32,6 +32,7 @@
     min-height: 100vh;
     color: var(--text);
     padding: 16px;
+    padding-bottom: calc(86px + env(safe-area-inset-bottom));
     display: flex;
     justify-content: center;
   }
@@ -420,7 +421,7 @@
   #lockError { color: var(--danger); font-size: .85rem; margin-top: 8px; min-height: 1.2em; }
 
   .toast {
-    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    position: fixed; bottom: calc(76px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%);
     background: var(--text); color: #fff;
     padding: 10px 18px; border-radius: 10px;
     font-size: 0.9rem;
@@ -437,12 +438,13 @@
 
   /* ==================# تب‌ها و منوی پایین #================== */
   .mainnav {
-    position: sticky; bottom: 0; z-index: 40;
+    position: fixed; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 652px; bottom: 0; z-index: 40;
     display: flex; gap: 2px; justify-content: space-around;
-    background: rgba(255,255,255,.96);
-    border: 1px solid var(--border); border-radius: 16px 16px 0 0;
+    background: #fff;
+    border: 1px solid var(--border); border-bottom: none; border-radius: 16px 16px 0 0;
     box-shadow: 0 -4px 14px rgba(0,0,0,.08);
-    margin: 14px -16px -16px; padding: 4px 2px 6px;
+    margin: 0; padding: 4px 2px calc(6px + env(safe-area-inset-bottom));
   }
   .mainnav button {
     flex: 1; border: none; background: none; font-family: inherit;
@@ -6433,7 +6435,7 @@ function renderCloud() {
 
 var BACKUP_APP = "karhaye-roozane";
 var BACKUP_VER = 2;
-var APP_VER = "3.4.2";
+var APP_VER = "3.4.3";
 var pendingImport = null;
 var importTries = 0;
 
@@ -7604,7 +7606,7 @@ if (bootEncrypted) {
       var bar = document.createElement("div");
       bar.id = "appUpdateBar";
       bar.setAttribute("role", "status");
-      bar.style.cssText = "position:fixed;left:10px;right:10px;bottom:14px;z-index:99999;display:flex;gap:8px;align-items:center;justify-content:space-between;background:#1e293b;color:#fff;padding:10px 12px;border-radius:14px;font-family:inherit;font-size:.85rem;box-shadow:0 8px 24px rgba(0,0,0,.28)";
+      bar.style.cssText = "position:fixed;left:10px;right:10px;bottom:calc(78px + env(safe-area-inset-bottom));z-index:99999;display:flex;gap:8px;align-items:center;justify-content:space-between;background:#1e293b;color:#fff;padding:10px 12px;border-radius:14px;font-family:inherit;font-size:.85rem;box-shadow:0 8px 24px rgba(0,0,0,.28)";
       var t = document.createElement("span");
       t.textContent = "🔄 نسخه‌ی جدید آماده است";
       var go = document.createElement("button");
