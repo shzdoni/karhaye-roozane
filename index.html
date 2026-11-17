@@ -648,6 +648,24 @@
   .room-side span { font-size: .68rem; color: var(--muted); }
   .room-dash { font-size: .8rem; color: var(--muted); flex: none; }
   .cloud-warn { font-size: .72rem; color: #92400e; background: #fef3c7; border: 1px solid #fcd34d; border-radius: 10px; padding: 6px 10px; margin-top: 8px; line-height: 1.8; }
+
+  /* هشدار حافظه و مودال بازیابی */
+  .app-warn { display: flex; gap: 8px; align-items: center; background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; border-radius: 12px; padding: 8px 10px; font-size: .78rem; margin: 8px 0; line-height: 1.8; }
+  .app-warn button { flex: none; background: #dc2626; color: #fff; border: none; border-radius: 8px; padding: 6px 10px; font-family: inherit; font-size: .75rem; cursor: pointer; }
+  .modal-overlay { position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: rgba(15,23,42,.55); z-index: 9998; display: none; align-items: center; justify-content: center; padding: 16px; }
+  .modal-box { background: #fff; border-radius: 16px; padding: 16px; width: 100%; max-width: 400px; max-height: 82vh; overflow: auto; box-shadow: 0 18px 60px rgba(0,0,0,.35); box-sizing: border-box; }
+  .modal-box h3 { margin: 0 0 8px; font-size: .95rem; color: var(--text); }
+  .imp-line { font-size: .82rem; padding: 4px 0; border-bottom: 1px dashed var(--border); display: flex; justify-content: space-between; gap: 8px; }
+  .imp-line b { color: var(--text); }
+  .imp-note { font-size: .74rem; color: var(--muted); margin-top: 8px; line-height: 1.9; }
+  .modal-actions { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
+  .modal-actions button { flex: 1; min-width: 90px; border: none; border-radius: 10px; padding: 9px 8px; font-family: inherit; font-size: .8rem; cursor: pointer; }
+  #impCancel { background: #f1f5f9; color: var(--muted); }
+  #impMerge { background: var(--primary); color: #fff; }
+  #impReplace { background: #fee2e2; color: #991b1b; }
+  #impPin { width: 100%; border: 2px solid var(--border); border-radius: 10px; padding: 10px; text-align: center; direction: ltr; letter-spacing: 4px; font-size: 1.05rem; font-family: inherit; box-sizing: border-box; outline: none; }
+  #impPin:focus { border-color: var(--primary); }
+  #impErr { color: var(--danger); font-size: .8rem; min-height: 1.1em; margin-top: 6px; }
 </style>
 </head>
 <body>
@@ -669,6 +687,11 @@
     <div class="date" id="dateText"></div>
     <div id="quoteLine" class="quote-line"></div>
   </header>
+
+  <div id="quotaWarn" class="app-warn" style="display:none">
+    <span id="quotaWarnTxt"></span>
+    <button type="button" id="quotaWarnBtn">⬇️ پشتیبان بگیر</button>
+  </div>
 
   <div class="tabsec" id="tabHome">
   <div class="card">
@@ -897,6 +920,7 @@
     <button class="footer-btn" id="removeLockBtn" style="display:none">🔓 برداشتن رمز</button>
     <input type="file" id="importFile" accept=".json" hidden>
   </div>
+  <p class="card-hint" id="bkInfo" style="text-align:center;margin-top:4px"></p>
   </div><!-- /tabHome -->
 
   <div class="tabsec" id="tabClub" style="display:none">
@@ -997,6 +1021,16 @@
   </div>
 
   <div class="card">
+    <h2 class="section-title">💾 پشتیبان و انتقال</h2>
+    <p class="card-hint" id="pfBackupInfo"></p>
+    <div class="footer-row" style="margin-top:6px">
+      <button type="button" class="footer-btn" id="exportBtn2">⬇️ ذخیره پشتیبان</button>
+      <button type="button" class="footer-btn" id="importBtn2">⬆️ بازیابی پشتیبان</button>
+    </div>
+    <p class="card-hint" style="margin-top:6px">نسخه <b id="appVerLbl">—</b> • برای انتقال گوشی: از دستگاه قدیمی پشتیبان بگیر، در دستگاه جدید «بازیابی» کن.</p>
+  </div>
+
+  <div class="card">
     <h2 class="section-title">📱 نصب برنامه</h2>
     <a class="gb-btn" href="./karhaye-roozane.apk" download style="display:block;text-align:center;text-decoration:none;margin-bottom:8px">⬇️ دانلود اپ اندروید (APK)</a>
     <p class="card-hint">برای آیفون: در Safari دکمه‌ی اشتراک‌گذاری → «افزودن به صفحه اصلی». اپ اندروید همین برنامه است و به‌روزرسانی‌ها خودکار در آن می‌آیند.</p>
@@ -1013,6 +1047,23 @@
 
   <div class="credit">⚡ این برنامه با افتخار توسط <b>مهندس رسول شیرازی</b> طراحی و توسعه یافته است<br>💬 تلگرام: <a href="https://t.me/sHZdONI" dir="ltr" target="_blank" rel="noopener">@sHZdONI</a></div>
 </div>
+
+  <div id="impModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="impTitle">
+    <div class="modal-box">
+      <h3 id="impTitle">پیش‌نمایش بازیابی</h3>
+      <div id="impBody"></div>
+      <div id="impPinWrap" style="display:none">
+        <p class="imp-note">این پشتیبان رمزدار است. رمزی که هنگام فعال‌کردن قفل گذاشتی را وارد کن.</p>
+        <input type="password" id="impPin" inputmode="numeric" maxlength="12" autocomplete="off" placeholder="••••">
+        <div id="impErr"></div>
+      </div>
+      <div class="modal-actions" id="impActions">
+        <button type="button" id="impCancel">انصراف</button>
+        <button type="button" id="impMerge">✅ ادغام کن</button>
+        <button type="button" id="impReplace">♻️ جایگزینی کامل</button>
+      </div>
+    </div>
+  </div>
 
 <div class="toast" id="toast"></div>
 
@@ -1147,6 +1198,38 @@ function showToast(msg) {
 /* ==================# ذخیره‌سازی #================== */
 
 var fallbackStore = null; // اگر localStorage نبود یا خطا داد، حافظه‌ی موقت
+var storageAvailable = (function () {
+  try {
+    window.localStorage.setItem("__kh_probe", "1");
+    window.localStorage.removeItem("__kh_probe");
+    return true;
+  } catch (e) {
+    return false;
+  }
+})();
+var storageWarnKind = null;
+
+function showStorageWarn(kind) {
+  var el = $("quotaWarn");
+  if (!el) return;
+  var txt = {
+    full: "حافظه‌ی مرورگر پر شد و تغییرات فقط موقتاً نگه داشته می‌شوند — با بستن صفحه از بین می‌روند. همین حالا پشتیبان بگیر.",
+    near: "حافظه‌ی مرورگر تقریباً پر است. یک پشتیبان بگیر و داده‌های قدیمی را پاک کن.",
+    blocked: "این مرورگر اجازه‌ی ذخیره‌سازی نمی‌دهد (حالت ناشناس یا تنظیمات سایت). داده‌ها با بستن صفحه پاک می‌شوند."
+  }[kind] || "";
+  el.style.display = "flex";
+  $("quotaWarnTxt").textContent = txt;
+  if (storageWarnKind !== kind) {
+    storageWarnKind = kind;
+    showToast(kind === "full" ? "حافظه پر شد — فوراً پشتیبان بگیر ⚠️" : "هشدار ذخیره‌سازی ⚠️");
+  }
+}
+
+function hideStorageWarn() {
+  var el = $("quotaWarn");
+  if (el) el.style.display = "none";
+  storageWarnKind = null;
+}
 
 function storageGetRaw() {
   try {
@@ -1169,8 +1252,14 @@ function storageGet() {
 function storageSet(raw) {
   try {
     window.localStorage.setItem(STORAGE_KEY, raw);
+    hideStorageWarn();
+    // هر کاراکتر localStorage حدوداً ۲ بایت است؛ نزدیک ۴.۵ مگابایت هشدار بده
+    if (raw.length > 2200000) showStorageWarn("near");
+    return true;
   } catch (e) {
     fallbackStore = raw;
+    showStorageWarn("full");
+    return false;
   }
 }
 
@@ -1178,6 +1267,7 @@ var saveChain = Promise.resolve();
 
 function storageSave(stateObj) {
   if (lockState.locked) return; // هرگز حین قفل ذخیره نکن
+  if (!storageAvailable) showStorageWarn("blocked");
   var raw = JSON.stringify(stateObj);
   if (!lockState.key) {
     storageSet(raw);
@@ -1188,7 +1278,7 @@ function storageSave(stateObj) {
     return encryptText(lockState.key, lockState.salt, raw);
   }).then(storageSet).catch(function () {
     fallbackStore = raw;
-    showToast("خطا در ذخیره‌سازی رمزنگاری‌شده ❌");
+    showStorageWarn("full");
   });
 }
 
@@ -2873,6 +2963,76 @@ function deleteGoal(id) {
 var POMO_WORK = 25 * 60, POMO_BREAK = 5 * 60;
 var pomo = { mode: "work", left: POMO_WORK, running: false, timer: null, endAt: 0 };
 
+function persistPomo() {
+  state.pomoRun = {
+    mode: pomo.mode,
+    left: Math.max(0, Math.round(pomo.left || 0)),
+    endAt: pomo.running ? pomo.endAt : 0,
+    running: pomo.running === true,
+    awarded: pomo.running !== true
+  };
+  scheduleSave();
+}
+
+function pomoFinish() {
+  clearInterval(pomo.timer);
+  pomo.timer = null;
+  pomo.running = false;
+  pomo.endAt = 0;
+  if (pomo.mode === "work") {
+    var t = todayKey();
+    state.pomos[t] = (state.pomos[t] || 0) + 1;
+    pomo.mode = "break";
+    pomo.left = POMO_BREAK;
+    pomoNotify("🍅 یک پومودورو تمام شد! ۵ دقیقه استراحت کن");
+    addXp(15, "پومودورو کامل");
+    addCoins(3, "پومودورو کامل");
+  } else {
+    pomo.mode = "work";
+    pomo.left = POMO_WORK;
+    pomoNotify("☕ استراحت تمام شد — بریم سراغ ۲۵ دقیقه‌ی بعد");
+  }
+  persistPomo();
+  renderAll();
+}
+
+// اگر صفحه/مرورگر بسته شد و برگشتی، جلسه‌ی قبلی گم نشود
+function restorePomo() {
+  var pr = state.pomoRun;
+  if (!pr || typeof pr !== "object") { pomoRender(); return; }
+  if (pr.mode === "break" || pr.mode === "work") pomo.mode = pr.mode;
+  if (pr.running === true && pr.endAt > 0) {
+    var left = Math.ceil((pr.endAt - Date.now()) / 1000);
+    if (left > 0) {
+      pomo.left = left;
+      pomo.endAt = pr.endAt;
+      pomo.running = true;
+      pomo.timer = setInterval(pomoTick, 500);
+      showToast("⏱️ پومودوروی قبلی ادامه پیدا کرد");
+    } else if (pomo.mode === "work" && pr.awarded !== true && Date.now() - pr.endAt < 12 * 3600 * 1000) {
+      var endedKey = dateKey(new Date(pr.endAt));
+      state.pomos[endedKey] = (state.pomos[endedKey] || 0) + 1;
+      state.pomoRun = { mode: "break", left: POMO_BREAK, endAt: 0, running: false, awarded: true };
+      pomo.mode = "break";
+      pomo.left = POMO_BREAK;
+      pomo.running = false;
+      pomo.endAt = 0;
+      addXp(15, "پومودورو کامل");
+      addCoins(3, "پومودورو کامل");
+      showToast("🍅 پومودورویی که پشت سر گذاشتی ثبت شد");
+    } else {
+      pomo.mode = "break";
+      pomo.left = POMO_BREAK;
+      pomo.running = false;
+      pomo.endAt = 0;
+      state.pomoRun = { mode: "break", left: POMO_BREAK, endAt: 0, running: false, awarded: true };
+    }
+  } else if (typeof pr.left === "number" && pr.left > 0 && pr.left <= 86400) {
+    pomo.left = Math.round(pr.left);
+  }
+  pomoRender();
+}
+
 function pomoRender() {
   var mm = Math.floor(pomo.left / 60), ss = pomo.left % 60;
   $("pomoTime").textContent = toFa((mm < 10 ? "0" : "") + mm + ":" + (ss < 10 ? "0" : "") + ss);
@@ -2895,25 +3055,7 @@ function pomoTick() {
   // محاسبه بر اساس زمان پایان تا در تب مخفی یا قفل‌شدن گوشی عقب نماند
   pomo.left = Math.max(0, Math.ceil((pomo.endAt - Date.now()) / 1000));
   if (pomo.left <= 0) {
-    clearInterval(pomo.timer);
-    pomo.timer = null;
-    pomo.running = false;
-    pomo.endAt = 0;
-    if (pomo.mode === "work") {
-      var t = todayKey();
-      state.pomos[t] = (state.pomos[t] || 0) + 1;
-      saveState();
-      pomo.mode = "break";
-      pomo.left = POMO_BREAK;
-      pomoNotify("🍅 یک پومودورو تمام شد! ۵ دقیقه استراحت کن");
-      addXp(15, "پومودورو کامل");
-      addCoins(3, "پومودورو کامل");
-    } else {
-      pomo.mode = "work";
-      pomo.left = POMO_WORK;
-      pomoNotify("☕ استراحت تمام شد — بریم سراغ ۲۵ دقیقه‌ی بعد");
-    }
-    renderAll();
+    pomoFinish();
     return;
   }
   pomoRender();
@@ -2931,6 +3073,7 @@ $("pomoStart").addEventListener("click", function () {
     pomo.timer = setInterval(pomoTick, 500);
     pomo.running = true;
   }
+  persistPomo();
   pomoRender();
 });
 
@@ -2941,6 +3084,7 @@ $("pomoReset").addEventListener("click", function () {
   pomo.endAt = 0;
   pomo.mode = "work";
   pomo.left = POMO_WORK;
+  persistPomo();
   pomoRender();
 });
 
@@ -5576,202 +5720,304 @@ function renderCloud() {
 
 /* ==================# پشتیبان‌گیری #================== */
 
-function exportData() {
+/* ==================# 💾 پشتیبان حرفه‌ای #================== */
+
+var BACKUP_APP = "karhaye-roozane";
+var BACKUP_VER = 2;
+var APP_VER = "3.1";
+var pendingImport = null;
+var importTries = 0;
+
+function browserTz() {
+  try { return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"; } catch (e) { return "UTC"; }
+}
+
+function bkFileName() { return "karhaye-roozane-backup-" + todayKey() + ".json"; }
+
+function writeBackupText(text, enc) {
+  var name = bkFileName();
   try {
-    var json = JSON.stringify(state, null, 2);
-    var fname = "کارهای-روزانه-پشتیبان-" + todayKey() + ".json";
     if (window.AndroidApp && typeof window.AndroidApp.saveBackup === "function") {
-      window.AndroidApp.saveBackup(fname, json);
-      showToast("فایل پشتیبان ذخیره شد 💾");
-      return;
+      window.AndroidApp.saveBackup(name, text);
+    } else {
+      var blob = new Blob([text], { type: "application/json" });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url; a.download = name;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
     }
-    var blob = new Blob([json], { type: "application/json" });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement("a");
-    a.href = url;
-    a.download = fname;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
-    showToast("فایل پشتیبان ذخیره شد 💾");
+    state.lastBackupAt = Date.now();
+    saveState();
+    renderBackupInfo();
+    showToast(enc ? "پشتیبان رمزدار ذخیره شد 🔐" : "پشتیبان ذخیره شد 💾");
   } catch (e) {
     showToast("مشکل در ذخیره پشتیبان ❌");
   }
 }
 
+function exportData() {
+  if (lockState.key && lockState.salt) {
+    var raw = JSON.stringify(state);
+    encryptText(lockState.key, lockState.salt, raw).then(function (blob) {
+      var env = { app: BACKUP_APP, v: BACKUP_VER, exportedAt: Date.now(), enc: true, tz: state.tz || browserTz(), blob: blob };
+      writeBackupText(JSON.stringify(env, null, 2), true);
+    }).catch(function () {
+      showToast("ساخت پشتیبان رمزدار ناموفق بود ❌");
+    });
+    return;
+  }
+  var plain = { app: BACKUP_APP, v: BACKUP_VER, exportedAt: Date.now(), enc: false, tz: state.tz || browserTz(), data: state };
+  writeBackupText(JSON.stringify(plain, null, 2), false);
+}
+
+function backupAgeLabel(ts) {
+  if (!ts) return "هنوز پشتیبانی نگرفته‌ای";
+  var n = diffDays(todayKey(), dateKey(new Date(ts)));
+  if (n <= 0) return "امروز";
+  if (n === 1) return "دیروز";
+  return toFa(n) + " روز پیش";
+}
+
+function renderBackupInfo() {
+  var txt = "آخرین پشتیبان: " + backupAgeLabel(state.lastBackupAt);
+  if (!state.lastBackupAt) txt += " ⚠️";
+  else if (diffDays(todayKey(), dateKey(new Date(state.lastBackupAt))) >= 7) txt += " — بیشتر از یک هفته گذشته ⚠️";
+  var safe = !!(lockState.key && lockState.salt);
+  txt += " • فایل جدید " + (safe ? "رمزدار 🔐" : "ساده (بدون رمز)") + " ساخته می‌شود";
+  if ($("bkInfo")) $("bkInfo").textContent = txt;
+  if ($("pfBackupInfo")) $("pfBackupInfo").textContent = txt;
+  if ($("appVerLbl")) $("appVerLbl").textContent = toFa(APP_VER);
+}
+
+/* ==================# ⬆️ بازیابی حرفه‌ای #================== */
+
+function isUsableBackupData(data) {
+  if (!data || typeof data !== "object") return false;
+  var known = ["tasks", "history", "notes", "brain", "birthdays", "reminders", "goals", "pomos", "moods", "gratitude", "badges", "letters", "challenges", "trackers", "journals", "friends", "xp", "coins", "cat", "profile"];
+  for (var i = 0; i < known.length; i++) if (data[known[i]] !== undefined) return true;
+  return false;
+}
+
 function importData(file) {
+  if (!file) return;
+  if (file.size > 8 * 1024 * 1024) { showToast("فایل پشتیبان خیلی بزرگ است ❌"); return; }
   var reader = new FileReader();
   reader.onload = function () {
-    try {
-      var data = JSON.parse(reader.result);
-      // اعتبارسنجی + ادغام با داده‌های فعلی (بدون از دست رفتن چیزی)
-      if (!data || typeof data !== "object" || !Array.isArray(data.tasks)) {
-        throw new Error("bad");
-      }
-      var incoming = {
-        tasks: data.tasks.filter(function (t) {
-          return t && typeof t.title === "string" && t.title.trim() && typeof t.createdAt === "number";
-        }).map(function (t) {
-          var tt = { id: typeof t.id === "number" ? t.id : t.createdAt, title: t.title.trim(), createdAt: t.createdAt };
-          if (typeof t.due === "string" && /^\d{4}-\d{2}-\d{2}$/.test(t.due)) tt.due = t.due;
-          if (t.star === true) tt.star = true;
-          if (t.rep === true) tt.rep = true;
-          return tt;
-        }),
-        history: (data.history && typeof data.history === "object") ? data.history : {},
-        birthdays: Array.isArray(data.birthdays) ? data.birthdays : [],
-        brain: Array.isArray(data.brain) ? data.brain : [],
-        notes: (data.notes && typeof data.notes === "object") ? data.notes : {},
-        reminders: Array.isArray(data.reminders) ? data.reminders : [],
-        goals: Array.isArray(data.goals) ? data.goals : [],
-        pomos: (data.pomos && typeof data.pomos === "object") ? data.pomos : {},
-        moods: (data.moods && typeof data.moods === "object") ? data.moods : {},
-        gratitude: (data.gratitude && typeof data.gratitude === "object") ? data.gratitude : {},
-        badges: (data.badges && typeof data.badges === "object") ? data.badges : {},
-        letters: Array.isArray(data.letters) ? data.letters : [],
-        challenges: Array.isArray(data.challenges) ? data.challenges : [],
-        trackers: (data.trackers && typeof data.trackers === "object") ? data.trackers : {},
-        journals: (data.journals && typeof data.journals === "object") ? data.journals : {},
-        friends: Array.isArray(data.friends) ? data.friends : [],
-        myName: (typeof data.myName === "string") ? data.myName : ""
-      };
-
-      // ادغام کارها (بدون تکرار بر اساس id؛ اگر id نبود بر اساس عنوان)
-      var seen = {};
-      for (var i = 0; i < state.tasks.length; i++) seen[state.tasks[i].id] = true;
-      for (var j = 0; j < incoming.tasks.length; j++) {
-        var t = incoming.tasks[j];
-        if (!seen[t.id]) { state.tasks.push(t); seen[t.id] = true; }
-      }
-      // ادغام تاریخچه
-      for (var key in incoming.history) {
-        if (typeof state.history[key] === "undefined") state.history[key] = incoming.history[key];
-        else for (var id in incoming.history[key]) { state.history[key][id] = true; }
-      }
-      // ادغام ذهن‌خالی
-      var seenC = {};
-      for (var ci = 0; ci < state.brain.length; ci++) seenC[state.brain[ci].id] = true;
-      for (var cj = 0; cj < incoming.brain.length; cj++) {
-        var cc = incoming.brain[cj];
-        if (cc && typeof cc.id === "number" && cc.text && cc.text.trim() && !seenC[cc.id]) { state.brain.push(cc); seenC[cc.id] = true; }
-      }
-      // ادغام یادداشت‌ها
-      for (var nk in incoming.notes) {
-        if (typeof state.notes[nk] === "undefined" && incoming.notes[nk]) state.notes[nk] = incoming.notes[nk];
-      }
-      // ادغام تولدها
-      var seenB = {};
-      for (var bi = 0; bi < state.birthdays.length; bi++) seenB[state.birthdays[bi].id] = true;
-      for (var bj = 0; bj < incoming.birthdays.length; bj++) {
-        var bb = incoming.birthdays[bj];
-        if (bb && typeof bb.id === "number" && !seenB[bb.id]) { state.birthdays.push(bb); seenB[bb.id] = true; }
-      }
-      if (!state.notifyOn && incoming.notifyOn) state.notifyOn = true;
-      // ادغام هدف‌های هفتگی
-      var seenG = {};
-      for (var gi0 = 0; gi0 < state.goals.length; gi0++) seenG[state.goals[gi0].id] = true;
-      for (var gj = 0; gj < incoming.goals.length; gj++) {
-        var gg = incoming.goals[gj];
-        if (gg && typeof gg.id === "number" && !seenG[gg.id]) { state.goals.push(gg); seenG[gg.id] = true; }
-      }
-      // ادغام پومودوروها (بیشینه)
-      for (var pk2 in incoming.pomos) {
-        if (/^\d{4}-\d{2}-\d{2}$/.test(pk2)) {
-          state.pomos[pk2] = Math.max(state.pomos[pk2] || 0, incoming.pomos[pk2] || 0);
-          if (state.pomos[pk2] <= 0) delete state.pomos[pk2];
-        }
-      }
-      // ادغام یادآورها
-      var seenR = {};
-      for (var ri0 = 0; ri0 < state.reminders.length; ri0++) seenR[state.reminders[ri0].id] = true;
-      for (var rj = 0; rj < incoming.reminders.length; rj++) {
-        var rr0 = incoming.reminders[rj];
-        if (rr0 && typeof rr0.id === "number" && !seenR[rr0.id]) { state.reminders.push(rr0); seenR[rr0.id] = true; }
-      }
-      // 🌡️ ادغام حال‌ها
-      for (var imk in incoming.moods) {
-        if (!state.moods[imk]) state.moods[imk] = incoming.moods[imk];
-      }
-      // 🙏 ادغام شکرگزاری‌ها
-      for (var igk in incoming.gratitude) {
-        if (!state.gratitude[igk]) state.gratitude[igk] = incoming.gratitude[igk];
-      }
-      // 🏅 ادغام نشان‌ها
-      for (var ibk in incoming.badges) {
-        if (!state.badges[ibk]) state.badges[ibk] = incoming.badges[ibk];
-      }
-      // 💌 ادغام نامه‌ها
-      var seenL = {};
-      for (var li0 = 0; li0 < state.letters.length; li0++) seenL[state.letters[li0].id] = true;
-      for (var lj = 0; lj < incoming.letters.length; lj++) {
-        var LL = incoming.letters[lj];
-        if (LL && typeof LL.id === "number" && !seenL[LL.id]) { state.letters.push(LL); seenL[LL.id] = true; }
-      }
-      // 🏃 ادغام چالش‌ها
-      var seenCh = {};
-      for (var chi0 = 0; chi0 < state.challenges.length; chi0++) seenCh[state.challenges[chi0].id] = true;
-      for (var chj = 0; chj < incoming.challenges.length; chj++) {
-        var CH = incoming.challenges[chj];
-        if (CH && typeof CH.id === "number" && !seenCh[CH.id]) { state.challenges.push(CH); seenCh[CH.id] = true; }
-      }
-      // 💧 ادغام پیگیرها (بیشینه)
-      var tkIds = ["water", "book", "sleep"];
-      for (var tti = 0; tti < tkIds.length; tti++) {
-        var ttk = tkIds[tti];
-        for (var tkk in (incoming.trackers[ttk] || {})) {
-          state.trackers[ttk][tkk] = Math.max(state.trackers[ttk][tkk] || 0, incoming.trackers[ttk][tkk] || 0);
-          if (state.trackers[ttk][tkk] <= 0) delete state.trackers[ttk][tkk];
-        }
-      }
-      // 📓 ادغام دفترچه‌ها
-      for (var ijk in incoming.journals) {
-        if (!state.journals[ijk]) state.journals[ijk] = incoming.journals[ijk];
-        else for (var ijdk in incoming.journals[ijk]) {
-          if (!state.journals[ijk][ijkd]) state.journals[ijk][ijkd] = incoming.journals[ijk][ijkd];
-        }
-      }
-      // 🏁 ادغام دوست‌ها + اسم من
-      var seenF = {};
-      for (var fi0 = 0; fi0 < state.friends.length; fi0++) seenF[state.friends[fi0].id] = true;
-      for (var fj = 0; fj < incoming.friends.length; fj++) {
-        var FR = incoming.friends[fj];
-        if (FR && typeof FR.id === "number" && !seenF[FR.id]) { state.friends.push(FR); seenF[FR.id] = true; }
-      }
-      if (!state.myName && incoming.myName) state.myName = incoming.myName;
-      // ⚡ ادغام ارتقا (XP/سکه/گربه/بازی‌ها/پروفایل)
-      if (typeof incoming.xp === "number" && incoming.xp > (state.xp || 0)) state.xp = Math.round(incoming.xp);
-      if (typeof incoming.coins === "number" && incoming.coins > (state.coins || 0)) state.coins = Math.round(incoming.coins);
-      if (typeof incoming.counters === "object" && incoming.counters && typeof incoming.counters.sport === "number" && incoming.counters.sport > (state.counters.sport || 0)) state.counters.sport = Math.round(incoming.counters.sport);
-      if (incoming.games && typeof incoming.games === "object") {
-        if (!state.games) state.games = { rec: {}, wins: {}, earned: {} };
-        for (var ggk in incoming.games.rec) state.games.rec[ggk] = Math.max(state.games.rec[ggk] || 0, incoming.games.rec[ggk] || 0);
-        for (var gwk in incoming.games.wins) state.games.wins[gwk] = Math.max(state.games.wins[gwk] || 0, incoming.games.wins[gwk] || 0);
-        for (var gek2 in incoming.games.earned) state.games.earned[gek2] = Math.max(state.games.earned[gek2] || 0, incoming.games.earned[gek2] || 0);
-      }
-      if (incoming.cat && typeof incoming.cat === "object" && !state.cat) state.cat = incoming.cat;
-      else if (incoming.cat && typeof incoming.cat === "object" && state.cat) {
-        state.cat.h = Math.max(state.cat.h || 0, incoming.cat.h || 0);
-        state.cat.e = Math.max(state.cat.e || 0, incoming.cat.e || 0);
-        state.cat.j = Math.max(state.cat.j || 0, incoming.cat.j || 0);
-        state.cat.c = Math.max(state.cat.c || 0, incoming.cat.c || 0);
-        state.cat.dev = Math.max(state.cat.dev || 0, incoming.cat.dev || 0);
-        if (incoming.cat.toys) for (var tyj = 0; tyj < incoming.cat.toys.length; tyj++) if (state.cat.toys.indexOf(incoming.cat.toys[tyj]) === -1) state.cat.toys.push(incoming.cat.toys[tyj]);
-      }
-      if (incoming.profile && typeof incoming.profile === "object" && !state.profile) state.profile = { av: incoming.profile.av || "😺", col: incoming.profile.col || "#6366f1" };
-      // پاکسازی داده‌های معیوب احتمالی
-      state = sanitize(state);
-      snapshotDay();
-      saveState();
-      renderAll();
-      renderNotifyBtn();
-      showToast("پشتیبان بازیابی شد ✅");
-    } catch (e) {
-      showToast("فایل پشتیبان معتبر نیست ❌");
+    var parsed;
+    try { parsed = JSON.parse(reader.result); } catch (e) { showToast("فایل پشتیبان معتبر نیست ❌"); return; }
+    if (!parsed || typeof parsed !== "object") { showToast("فایل پشتیبان معتبر نیست ❌"); return; }
+    if (parsed.enc === true) {
+      if (typeof parsed.blob !== "string" || parsed.blob.indexOf(LOCK_PREFIX) !== 0) { showToast("فایل رمزدار خراب است ❌"); return; }
+      pendingImport = { enc: true, blob: parsed.blob, exportedAt: parsed.exportedAt || 0 };
+      importTries = 0;
+      openImportModal("pin");
+      return;
     }
+    var data = (parsed.app === BACKUP_APP && parsed.data && typeof parsed.data === "object") ? parsed.data : parsed;
+    if (!isUsableBackupData(data)) { showToast("این فایل، پشتیبان معتبری نیست ❌"); return; }
+    pendingImport = { enc: false, incoming: sanitize(data), exportedAt: parsed.exportedAt || 0 };
+    openImportModal("preview");
   };
   reader.onerror = function () { showToast("خواندن فایل ناموفق بود ❌"); };
   reader.readAsText(file);
+}
+
+function openImportModal(kind) {
+  var modal = $("impModal");
+  $("impErr").textContent = "";
+  $("impPin").value = "";
+  $("impPinWrap").style.display = kind === "pin" ? "block" : "none";
+  $("impMerge").style.display = kind === "pin" ? "none" : "inline-block";
+  $("impReplace").style.display = kind === "pin" ? "none" : "inline-block";
+  $("impActions").style.display = "flex";
+  if (kind === "pin") {
+    $("impTitle").textContent = "🔐 پشتیبان رمزدار";
+    $("impBody").textContent = "";
+    modal.style.display = "flex";
+    setTimeout(function () { try { $("impPin").focus(); } catch (e) {} }, 60);
+    return;
+  }
+  pendingImport.incoming = sanitize(pendingImport.incoming);
+  renderImportPreview();
+  modal.style.display = "flex";
+}
+
+function closeImportModal() {
+  $("impModal").style.display = "none";
+  pendingImport = null;
+  if ($("importFile")) $("importFile").value = "";
+}
+
+function impLine(label, value) {
+  var row = document.createElement("div"); row.className = "imp-line";
+  var a = document.createElement("span"); a.textContent = label;
+  var b = document.createElement("b"); b.textContent = value;
+  row.appendChild(a); row.appendChild(b); return row;
+}
+
+function taskKeyOf(t) { return t.title.replace(/\s+/g, " ").trim() + "|" + (t.due || ""); }
+
+function countNewTasks(inc) {
+  var seenId = {}, seenKey = {}, added = 0;
+  for (var i = 0; i < state.tasks.length; i++) { seenId[state.tasks[i].id] = 1; seenKey[taskKeyOf(state.tasks[i])] = 1; }
+  for (var j = 0; j < inc.tasks.length; j++) {
+    var t = inc.tasks[j];
+    if (!seenId[t.id] && !seenKey[taskKeyOf(t)]) { added++; seenId[t.id] = 1; seenKey[taskKeyOf(t)] = 1; }
+  }
+  return added;
+}
+
+function countKeys(obj) { var n = 0; for (var k in obj) n++; return n; }
+
+function renderImportPreview() {
+  var inc = pendingImport.incoming;
+  var body = $("impBody");
+  body.textContent = "";
+  var when = pendingImport.exportedAt ? faDate(dateKey(new Date(pendingImport.exportedAt))) : "نامشخص";
+  body.appendChild(impLine("📅 تاریخ فایل", when));
+  body.appendChild(impLine("✅ کارها", toFa(countNewTasks(inc)) + " جدید از " + toFa(inc.tasks.length)));
+  body.appendChild(impLine("📊 روزهای تاریخچه", toFa(countKeys(inc.history))));
+  body.appendChild(impLine("📝 یادداشت‌ها", toFa(countKeys(inc.notes))));
+  body.appendChild(impLine("🧠 ذهن‌خالی", toFa(inc.brain.length)));
+  body.appendChild(impLine("⏰ یادآورها", toFa(inc.reminders.length)));
+  body.appendChild(impLine("💌 نامه‌ها", toFa(inc.letters.length)));
+  body.appendChild(impLine("🏅 نشان‌ها", toFa(countKeys(inc.badges))));
+  body.appendChild(impLine("⚡ XP / 🪙 سکه", toFa(inc.xp || 0) + " / " + toFa(inc.coins || 0)));
+  body.appendChild(impLine("🐱 گربه", inc.cat ? (inc.cat.name || "بدون نام") : "ندارد"));
+  var note = document.createElement("p");
+  note.className = "imp-note";
+  note.textContent = "«ادغام» فقط چیزهای تازه را اضافه می‌کند و چیزی را پاک نمی‌کند؛ برای امتیاز و آمار، مقدار بزرگ‌تر نگه داشته می‌شود. «جایگزینی کامل» همه‌ی داده‌های فعلی این دستگاه را با فایل عوض می‌کند.";
+  body.appendChild(note);
+  if (!pendingImport.enc) {
+    var pr = document.createElement("p");
+    pr.className = "imp-note";
+    pr.textContent = "این فایل رمز ندارد؛ اگر قفل رمز را فعال کنی، پشتیبان‌های بعدی رمزدار می‌شوند.";
+    body.appendChild(pr);
+  }
+  $("impTitle").textContent = "پیش‌نمایش بازیابی";
+}
+
+function unionDays(target, src) {
+  for (var k in src) {
+    if (!target[k]) target[k] = {};
+    for (var id in src[k]) target[k][id] = true;
+  }
+}
+
+function mergeImport() {
+  if (!pendingImport || !pendingImport.incoming) return;
+  var inc = pendingImport.incoming;
+  var addedTasks = 0;
+  var seenId = {}, seenKey = {};
+  for (var i = 0; i < state.tasks.length; i++) { seenId[state.tasks[i].id] = 1; seenKey[taskKeyOf(state.tasks[i])] = 1; }
+  for (var j = 0; j < inc.tasks.length; j++) {
+    var t = inc.tasks[j];
+    if (seenId[t.id] || seenKey[taskKeyOf(t)]) continue;
+    state.tasks.push(t); seenId[t.id] = 1; seenKey[taskKeyOf(t)] = 1; addedTasks++;
+  }
+  unionDays(state.history, inc.history);
+  for (var dk in inc.notes) if (!state.notes[dk]) state.notes[dk] = inc.notes[dk];
+  for (var mk in inc.moods) if (!state.moods[mk]) state.moods[mk] = inc.moods[mk];
+  for (var gk in inc.gratitude) if (!state.gratitude[gk]) state.gratitude[gk] = inc.gratitude[gk];
+  for (var bk in inc.badges) if (!state.badges[bk]) state.badges[bk] = inc.badges[bk];
+  for (var pk in inc.pomos) state.pomos[pk] = Math.max(state.pomos[pk] || 0, inc.pomos[pk] || 0);
+  for (var sk in inc.daySnap) if (!state.daySnap[sk]) state.daySnap[sk] = inc.daySnap[sk];
+  var arrs = ["brain", "birthdays", "reminders", "goals", "letters", "challenges", "friends"];
+  for (var ai = 0; ai < arrs.length; ai++) {
+    var nm = arrs[ai];
+    if (!Array.isArray(inc[nm])) continue;
+    var seen = {};
+    for (var k = 0; k < state[nm].length; k++) seen[state[nm][k].id] = 1;
+    for (var q = 0; q < inc[nm].length; q++) {
+      var item = inc[nm][q];
+      if (!item || seen[item.id]) continue;
+      state[nm].push(item); seen[item.id] = 1;
+    }
+  }
+  for (var jk in inc.journals) {
+    if (!state.journals[jk]) state.journals[jk] = {};
+    for (var jd in inc.journals[jk]) if (!state.journals[jk][jd]) state.journals[jk][jd] = inc.journals[jk][jd];
+  }
+  for (var tk2 in inc.trackers) {
+    for (var td in inc.trackers[tk2]) state.trackers[tk2][td] = Math.max(state.trackers[tk2][td] || 0, inc.trackers[tk2][td] || 0);
+  }
+  if (typeof inc.xp === "number" && inc.xp > (state.xp || 0)) state.xp = inc.xp;
+  if (typeof inc.coins === "number" && inc.coins > (state.coins || 0)) state.coins = inc.coins;
+  if (inc.counters && inc.counters.sport > (state.counters.sport || 0)) state.counters.sport = inc.counters.sport;
+  if (inc.games) {
+    for (var gr in inc.games.rec) state.games.rec[gr] = Math.max(state.games.rec[gr] || 0, inc.games.rec[gr] || 0);
+    for (var gw in inc.games.wins) state.games.wins[gw] = Math.max(state.games.wins[gw] || 0, inc.games.wins[gw] || 0);
+    for (var ge in inc.games.earned) state.games.earned[ge] = Math.max(state.games.earned[ge] || 0, inc.games.earned[ge] || 0);
+  }
+  if (inc.cat) {
+    if (!state.cat) state.cat = inc.cat;
+    else {
+      state.cat.h = Math.max(state.cat.h, inc.cat.h);
+      state.cat.e = Math.max(state.cat.e, inc.cat.e);
+      state.cat.j = Math.max(state.cat.j, inc.cat.j);
+      state.cat.c = Math.max(state.cat.c, inc.cat.c);
+      state.cat.dev = Math.max(state.cat.dev, inc.cat.dev);
+      if (!state.cat.name && inc.cat.name) state.cat.name = inc.cat.name;
+      for (var ty = 0; ty < inc.cat.toys.length; ty++) if (state.cat.toys.indexOf(inc.cat.toys[ty]) === -1) state.cat.toys.push(inc.cat.toys[ty]);
+    }
+  }
+  if (!state.profile && inc.profile) state.profile = inc.profile;
+  if (!state.myName && inc.myName) state.myName = inc.myName;
+  if (!state.lastBackupAt || (inc.lastBackupAt && inc.lastBackupAt > state.lastBackupAt)) state.lastBackupAt = inc.lastBackupAt || state.lastBackupAt;
+  if (!state.tz && inc.tz) state.tz = inc.tz;
+  state = sanitize(state);
+  snapshotDay();
+  saveState();
+  renderAll();
+  renderProfile();
+  renderBackupInfo();
+  closeImportModal();
+  showToast(toFa(addedTasks) + " کار جدید اضافه شد ✅");
+}
+
+function replaceImport() {
+  if (!pendingImport || !pendingImport.incoming) return;
+  if (!window.confirm("همه‌ی داده‌های فعلی این دستگاه با فایل پشتیبان جایگزین شود؟ این کار برگشت‌پذیر نیست.")) return;
+  state = sanitize(pendingImport.incoming);
+  if (!state.tz) state.tz = browserTz();
+  ensureCat(); ensureProfile(); ensureMissions();
+  snapshotDay();
+  saveState();
+  renderAll();
+  renderProfile();
+  renderBackupInfo();
+  switchTab(state.tab || "home");
+  closeImportModal();
+  showToast("داده‌ها جایگزین شد ✅");
+}
+
+function tryImportPin() {
+  if (!pendingImport || !pendingImport.enc) return;
+  if (importTries >= 5) { $("impErr").textContent = "چند بار اشتباه بود؛ فایل را دوباره انتخاب کن."; return; }
+  var pin = $("impPin").value;
+  if (!/^\d{4,12}$/.test(pin)) { $("impErr").textContent = "رمز ۴ تا ۱۲ رقمی است."; return; }
+  var parts = pendingImport.blob.slice(LOCK_PREFIX.length).split("|");
+  if (parts.length !== 3) { $("impErr").textContent = "فایل خراب است."; return; }
+  $("impErr").textContent = "در حال باز کردن…";
+  deriveKey(pin, b642buf(parts[0])).then(function (k) {
+    return crypto.subtle.decrypt({ name: "AES-GCM", iv: b642buf(parts[1]) }, k, b642buf(parts[2]));
+  }).then(function (pt) {
+    var data = JSON.parse(new TextDecoder().decode(pt));
+    if (!isUsableBackupData(data)) throw new Error("bad");
+    pendingImport.incoming = sanitize(data);
+    pendingImport.enc = false;
+    importTries = 0;
+    renderImportPreview();
+    $("impPinWrap").style.display = "none";
+    $("impMerge").style.display = "inline-block";
+    $("impReplace").style.display = "inline-block";
+    $("impTitle").textContent = "پیش‌نمایش بازیابی (رمزگشایی شد)";
+    $("impErr").textContent = "";
+  }).catch(function () {
+    importTries++;
+    $("impErr").textContent = "رمز اشتباه یا فایل آسیب‌دیده ❌ (" + toFa(importTries) + " از ۵)";
+  });
 }
 
 function sanitize(s) {
@@ -6041,6 +6287,23 @@ function sanitize(s) {
     }
   }
   clean.tab = (typeof s.tab === "string" && ["home", "club", "mind", "cat", "profile"].indexOf(s.tab) !== -1) ? s.tab : "home";
+  // نسخه‌بندی اسکیما + منطقه‌زمانی + تاریخ آخرین پشتیبان + وضعیت پومودورو
+  clean.v = 2;
+  clean.tz = (typeof s.tz === "string" && /^[A-Za-z0-9_\/+.-]{2,48}$/.test(s.tz)) ? s.tz : null;
+  clean.lastBackupAt = (typeof s.lastBackupAt === "number" && s.lastBackupAt > 1000000000000 && s.lastBackupAt < 4102444800000) ? Math.round(s.lastBackupAt) : null;
+  clean.pomoRun = null;
+  if (s.pomoRun && typeof s.pomoRun === "object") {
+    var prMode = (s.pomoRun.mode === "break") ? "break" : "work";
+    var prLeft = (typeof s.pomoRun.left === "number" && s.pomoRun.left >= 0 && s.pomoRun.left <= 86400) ? Math.round(s.pomoRun.left) : 0;
+    var prEnd = (typeof s.pomoRun.endAt === "number" && s.pomoRun.endAt > 0 && s.pomoRun.endAt < 4102444800000) ? Math.round(s.pomoRun.endAt) : 0;
+    clean.pomoRun = {
+      mode: prMode,
+      left: prLeft,
+      endAt: prEnd,
+      running: s.pomoRun.running === true && prEnd > 0,
+      awarded: s.pomoRun.awarded === true
+    };
+  }
   markDirty();
   return clean;
 }
@@ -6116,6 +6379,9 @@ function finishUnlock() {
   ensureCat();
   ensureProfile();
   ensureMissions();
+  if (!state.tz) state.tz = browserTz();
+  restorePomo();
+  renderBackupInfo();
   switchTab(state.tab || "home");
   loadFirebase();
   showToast("برنامه باز شد 👋");
@@ -6349,6 +6615,18 @@ $("noteInput").addEventListener("change", function () { noteFlush(); });
 $("noteInput").addEventListener("blur", function () { noteFlush(); });
 $("exportBtn").addEventListener("click", exportData);
 $("importBtn").addEventListener("click", function () { $("importFile").click(); });
+$("exportBtn2").addEventListener("click", exportData);
+$("importBtn2").addEventListener("click", function () { $("importFile").click(); });
+$("quotaWarnBtn").addEventListener("click", exportData);
+$("impCancel").addEventListener("click", closeImportModal);
+$("impMerge").addEventListener("click", mergeImport);
+$("impReplace").addEventListener("click", replaceImport);
+$("impPin").addEventListener("keydown", function (e) {
+  if (e.key === "Enter") { e.preventDefault(); tryImportPin(); }
+});
+$("impModal").addEventListener("click", function (e) {
+  if (e.target === $("impModal")) closeImportModal();
+});
 $("importFile").addEventListener("change", function (e) {
   if (e.target.files && e.target.files[0]) {
     importData(e.target.files[0]);
@@ -6432,9 +6710,12 @@ if (bootEncrypted) {
     }
   }
   if (bootEncrypted) return; // بعد از بازکردن قفل، applyLockUI تب‌ها را برمی‌گرداند
+  if (!state.tz) state.tz = browserTz();
   ensureCat();
   ensureProfile();
   ensureMissions();
+  restorePomo();
+  renderBackupInfo();
   switchTab(state.tab || "home");
   loadFirebase(); // ☁️ اتصال Firebase (آفلاین بی‌ضرر)
   if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
