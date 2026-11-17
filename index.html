@@ -5819,7 +5819,8 @@ function cloudPush(force) {
     cat: cloudCatBits(),
     seen: Date.now()
   };
-  patch["days." + today] = day;
+  patch.days = {};
+  patch.days[today] = day;
   CLOUD.me.name = patch.name; CLOUD.me.av = patch.av; CLOUD.me.col = patch.col;
   CLOUD.me.xp = patch.xp; CLOUD.me.day = day; CLOUD.me.week = patch.week;
   CLOUD.me.privacy = patch.privacy;
@@ -5831,8 +5832,7 @@ function cloudPush(force) {
   if (state.privacy.share === false) {
     pubRef.delete().catch(function () {});
   } else {
-    var pub = { name: patch.name, av: patch.av, col: patch.col, day: patch.day, week: patch.week, privacy: patch.privacy, cat: patch.cat, seen: patch.seen };
-    pub["days." + today] = day;
+    var pub = { name: patch.name, av: patch.av, col: patch.col, day: patch.day, week: patch.week, privacy: patch.privacy, cat: patch.cat, seen: patch.seen, days: patch.days };
     pubRef.set(pub, { merge: true }).catch(function () {});
   }
   renderCloudStats();
@@ -6186,7 +6186,7 @@ function renderCloud() {
 
 var BACKUP_APP = "karhaye-roozane";
 var BACKUP_VER = 2;
-var APP_VER = "3.3";
+var APP_VER = "3.3.1";
 var pendingImport = null;
 var importTries = 0;
 
