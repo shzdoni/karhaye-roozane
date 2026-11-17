@@ -34,11 +34,11 @@ jobs:
       - name: Unzip project
         run: unzip -q android-project.zip -d build-src && ls build-src
 
-      - name: Build debug APK
-        run: gradle -p build-src/android-project assembleDebug --no-daemon
+      - name: Build release APK
+        run: gradle -p build-src/android-project assembleRelease --no-daemon
 
       - name: Collect APK
-        run: cp build-src/android-project/app/build/outputs/apk/debug/app-debug.apk karhaye-roozane.apk
+        run: cp build-src/android-project/app/build/outputs/apk/release/app-release.apk karhaye-roozane.apk
 
       - name: Publish APK to release
         uses: softprops/action-gh-release@v2
