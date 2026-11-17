@@ -934,6 +934,8 @@
     <button class="footer-btn" id="clearDayBtn">🔄 پاک کردن تیک‌های امروز</button>
     <button class="footer-btn" id="lockBtn">🔒 قفل با رمز</button>
     <button class="footer-btn" id="removeLockBtn" style="display:none">🔓 برداشتن رمز</button>
+    <button class="footer-btn" id="cloudBackupBtn">☁️ پشتیبان ابری رمزدار</button>
+    <button class="footer-btn" id="cloudRestoreBtn">☁️ بازیابی از ابر</button>
     <input type="file" id="importFile" accept=".json" hidden>
   </div>
   <p class="card-hint" id="bkInfo" style="text-align:center;margin-top:4px"></p>
@@ -1058,11 +1060,19 @@
     <h2 class="section-title">🔒 حریم خصوصی</h2>
     <div class="priv-row">
       <label style="display:flex;align-items:center;gap:6px;flex:1">
-        <input type="checkbox" id="privShare" checked>
-        <span>امتیازهام در باشگاه رقابت دیده بشه</span>
+        <input type="checkbox" id="privShare">
+        <span>پروفایلم در باشگاه و برای دوستانم منتشر شود</span>
       </label>
     </div>
-    <p class="priv-note">یادداشت‌ها، کارهای روزانه، خاطرات و دفترچه‌هات <b>فقط روی گوشی خودت</b> ذخیره می‌شن و هرگز برای هیچ‌کس ارسال نمی‌شن — در رقابت فقط اسم و عدد امتیاز رد و بدل می‌شه. 🔐</p>
+    <div id="privMore" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0;font-size:.82rem">
+      <label style="display:flex;align-items:center;gap:5px"><input type="checkbox" id="privName"> نمایش نام</label>
+      <label style="display:flex;align-items:center;gap:5px"><input type="checkbox" id="privScore"> نمایش امتیاز</label>
+      <label style="display:flex;align-items:center;gap:5px"><input type="checkbox" id="privMedals"> نمایش نشان‌ها</label>
+      <label style="display:flex;align-items:center;gap:5px"><input type="checkbox" id="privCat"> نمایش گربه</label>
+      <label style="display:flex;align-items:center;gap:5px"><input type="checkbox" id="privFeed"> فعالیت در فید دوستان</label>
+      <label style="display:flex;align-items:center;gap:5px"><input type="checkbox" id="privOnline"> نمایش آنلاین</label>
+    </div>
+    <p class="priv-note">پیش‌فرض محافظه‌کارانه است: تا گزینه‌ی اصلی را روشن نکنی هیچ‌چیز در باشگاه منتشر نمی‌شود. هر مورد را می‌توانی جدا خاموش کنی. خاموش کردن «فعالیت در فید» پست‌های قبلی را هم از دید دوستان پنهان می‌کند. یادداشت‌ها، کارها و خاطرات هرگز آپلود نمی‌شوند. 🔐</p>
   </div>
 
   <div class="card">
@@ -1410,7 +1420,10 @@ window.addEventListener("beforeunload", flushSave);
 // موبایل/iOS هم با pagehide و مخفی‌شدن صفحه ذخیره شود
 window.addEventListener("pagehide", flushSave);
 document.addEventListener("visibilitychange", function () {
-  if (document.visibilityState === "hidden") flushSave();
+  if (document.visibilityState === "hidden") { flushSave(); return; }
+  // برگشت از پس‌زمینه/قفل گوشی: پومودورو و یادآورها فوراً با زمان واقعی هماهنگ شوند
+  try { if (pomo && pomo.running) pomoTick(); } catch (e) {}
+  try { if (typeof checkReminders === "function") checkReminders(); } catch (e) {}
 });
 // همگام‌سازی بین تب‌ها: تغییر در تب دیگر، این تب را هم تازه می‌کند
 window.addEventListener("storage", function (e) {
@@ -1492,7 +1505,14 @@ function toggleDone(id, el) {
   if (justDone) {
     haptic(25);
     celebrateAt(el || null);
-    onTickRewards(el, id);
+    // پاداش هر کار در هر روز فقط یک‌بار؛ تیک‌زدن/برداشتن مکرر XP و سکه نمی‌سازد
+    if (!state.tickAward || typeof state.tickAward !== "object") state.tickAward = {};
+    var ta = state.tickAward[today];
+    if (!ta) { ta = {}; state.tickAward[today] = ta; }
+    if (!ta[id]) {
+      ta[id] = true;
+      onTickRewards(el, id);
+    }
   }
 }
 
@@ -3079,6 +3099,7 @@ function restorePomo() {
       pomo.endAt = 0;
       addXp(15, "پومودورو کامل");
       addCoins(3, "پومودورو کامل");
+      saveState();
       showToast("🍅 پومودورویی که پشت سر گذاشتی ثبت شد");
     } else {
       pomo.mode = "break";
@@ -3161,13 +3182,19 @@ function moodEmoji(v) { for (var i = 0; i < MOODS.length; i++) if (MOODS[i].v ==
 function moodName(v) { for (var i = 0; i < MOODS.length; i++) if (MOODS[i].v === v) return MOODS[i].t; return ""; }
 
 function setMood(v) {
-  state.moods[todayKey()] = v;
+  var today = todayKey();
+  // پاداش ثبت حال فقط یک‌بار در روز، حتی اگر حال را عوض کند
+  var awardNow = !state.moods[today] && state.moodAwarded !== today;
+  state.moods[today] = v;
   scheduleSave();
   markDirty();
   renderAll();
   haptic(15);
   showToast("حال امروز ثبت شد " + moodEmoji(v));
-  addXp(4, "ثبت حال امروز");
+  if (awardNow) {
+    state.moodAwarded = today;
+    addXp(4, "ثبت حال امروز");
+  }
 }
 
 function renderMood() {
@@ -3923,9 +3950,8 @@ function loadSocial() {
     if (raw) {
       var o = JSON.parse(raw);
       if (o && typeof o === "object") {
-        if (typeof o.dbUrl === "string" && /^https:\/\/.+/.test(o.dbUrl)) d.dbUrl = o.dbUrl;
         if (typeof o.myName === "string") d.myName = o.myName.slice(0, 30);
-        if (typeof o.myId === "string" && /^[A-Za-z0-9]{6,20}$/.test(o.myId)) d.myId = o.myId;
+        if (typeof o.myId === "string" && /^[A-Za-z0-9]{6,40}$/.test(o.myId)) d.myId = o.myId;
         if (o.room && typeof o.room === "object" && typeof o.room.code === "string" && /^[A-Z0-9]{6}$/.test(o.room.code)) d.room = { code: o.room.code, t: typeof o.room.t === "string" ? o.room.t.slice(0, 60) : "" };
       }
     }
@@ -3982,15 +4008,26 @@ function liveStartPolling() {
   livePoll();
 }
 
+function liveEnsureId() {
+  var u = (typeof CLOUD !== "undefined" && CLOUD.auth && CLOUD.auth.currentUser) ? CLOUD.auth.currentUser : null;
+  if (u && social.myId !== u.uid) { social.myId = u.uid; saveSocial(); }
+  return !!u;
+}
+
 function livePoll() {
   if (!social.room || !social.dbUrl) { liveStopPolling(); return; }
+  if (!liveEnsureId()) { liveDot(false); return; }
   var me = { n: social.myName || "من", w: weekTotalTicks(), s: maxStreakAll(), u: Date.now() };
-  // اول نوشتن امتیاز من، بعد خواندن کل اتاق
+  // امنیت RTDB: فقط عضو خودم را می‌نویسم، بعد عنوان و اعضا را جدا می‌خوانم
   liveFetch(liveBase() + "/members/" + social.myId + ".json", { method: "PUT", body: JSON.stringify(me) })
-    .then(function (r) { if (!r.ok) throw new Error("w" + r.status); return liveFetch(liveBase() + ".json"); })
-    .then(function (r2) { if (!r2.ok) throw new Error("r" + r2.status); return r2.json(); })
-    .then(function (data) {
-      if (!data || !data.t) {
+    .then(function (r) { if (!r.ok) throw new Error("w" + r.status); return Promise.all([liveFetch(liveBase() + "/t.json"), liveFetch(liveBase() + "/members.json")]); })
+    .then(function (rs) {
+      if (!rs[0].ok || !rs[1].ok) throw new Error("r" + (rs[0].ok ? rs[1].status : rs[0].status));
+      return Promise.all([rs[0].json(), rs[1].json()]);
+    })
+    .then(function (parts) {
+      var goal = parts[0], mem = parts[1];
+      if (!goal) {
         social.room = null;
         saveSocial();
         liveStopPolling();
@@ -3998,8 +4035,8 @@ function livePoll() {
         showToast("اتاق موجود نیست — شاید حذف شده باشد");
         return;
       }
-      social.room.t = String(data.t).slice(0, 60);
-      liveData = data;
+      social.room.t = String(goal).slice(0, 60);
+      liveData = { t: goal, members: (mem && typeof mem === "object") ? mem : {} };
       liveLastOk = Date.now();
       liveDot(true);
       renderLive();
@@ -4032,39 +4069,6 @@ function renderLive() {
   setup.textContent = "";
   main.textContent = "";
 
-  if (!social.dbUrl) {
-    var steps = document.createElement("div");
-    steps.className = "live-step";
-    steps.textContent = "برای رقابتِ زنده یک‌بار (رایگان) Firebase بساز — ۲ دقیقه، راهنمای قدم‌به‌قدم پایین صفحه (بخش 🌐). بعد آدرس دیتابیست را اینجا بچسبان:";
-    setup.appendChild(steps);
-    var row = document.createElement("div");
-    row.className = "live-setup-row";
-    var inp = document.createElement("input");
-    inp.id = "liveUrlInput";
-    inp.type = "text";
-    inp.placeholder = "https://نام-پروژه-default-rtdb.firebaseio.com";
-    inp.value = "";
-    var btn = document.createElement("button");
-    btn.type = "button";
-    btn.id = "liveUrlSave";
-    btn.textContent = "✅ اتصال";
-    btn.addEventListener("click", function () {
-      var v = (inp.value || "").trim();
-      if (!/^https:\/\/[a-z0-9-]+[a-z0-9.-]*(firebaseio\.com|firebasedatabase\.app)(\/)?$/.test(v)) {
-        showToast("آدرس معتبر نیست — مثل نمونه کامل باشد");
-        return;
-      }
-      social.dbUrl = v.replace(/\/+$/, "");
-      saveSocial();
-      renderAll();
-      showToast("اتصال ثبت شد 🌐 حالا اتاق بساز یا وارد شو");
-    });
-    row.appendChild(inp);
-    row.appendChild(btn);
-    setup.appendChild(row);
-    return;
-  }
-
   if (!social.room) {
     var btns = document.createElement("div");
     btns.className = "live-btns";
@@ -4073,6 +4077,7 @@ function renderLive() {
     b1.className = "footer-btn";
     b1.textContent = "🆕 ساخت اتاق رقابت";
     b1.addEventListener("click", function () {
+      if (!liveEnsureId()) { showToast("اول چند لحظه صبر کن تا اتصال امن برقرار شود ☁️"); return; }
       if (!liveAskName()) return;
       var goal = window.prompt("هدف مشترک چی باشه؟ (مثلاً: چالش ورزش)", "چالش ورزش");
       if (goal === null) return;
@@ -4080,10 +4085,10 @@ function renderLive() {
       var chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
       var code = "";
       for (var i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
-      var url = social.dbUrl.replace(/\/+$/, "") + "/rooms/" + code + ".json";
-      liveFetch(url).then(function (r) { return r.json(); }).then(function (exists) {
+      var url = social.dbUrl.replace(/\/+$/, "") + "/rooms/" + code;
+      liveFetch(url + "/t.json").then(function (r) { return r.json(); }).then(function (exists) {
         if (exists) { showToast("کد تصادفی تکراری شد — دوباره امتحان کن"); return; }
-        return liveFetch(url, { method: "PUT", body: JSON.stringify({ t: goal, c: Date.now() }) }).then(function (r) {
+        return liveFetch(url + ".json", { method: "PUT", body: JSON.stringify({ t: goal, c: Date.now(), o: CLOUD.uid }) }).then(function (r) {
           if (!r.ok) throw new Error("c");
           social.room = { code: code, t: goal };
           saveSocial();
@@ -4098,35 +4103,22 @@ function renderLive() {
     b2.className = "footer-btn";
     b2.textContent = "🔑 ورود با کد اتاق";
     b2.addEventListener("click", function () {
+      if (!liveEnsureId()) { showToast("اول چند لحظه صبر کن تا اتصال امن برقرار شود ☁️"); return; }
       if (!liveAskName()) return;
       var code = (window.prompt("کد ۶ حرفی اتاق را وارد کن:", "") || "").trim().toUpperCase();
       if (!/^[A-Z0-9]{6}$/.test(code)) { showToast("کد باید ۶ حرف/عدد باشد"); return; }
-      var url = social.dbUrl.replace(/\/+$/, "") + "/rooms/" + code + ".json";
+      var url = social.dbUrl.replace(/\/+$/, "") + "/rooms/" + code + "/t.json";
       liveFetch(url).then(function (r) { return r.json(); }).then(function (data) {
-        if (!data || !data.t) { showToast("چنین اتاقی پیدا نشد ❌"); return; }
-        social.room = { code: code, t: String(data.t).slice(0, 60) };
+        if (!data) { showToast("چنین اتاقی پیدا نشد ❌"); return; }
+        social.room = { code: code, t: String(data).slice(0, 60) };
         saveSocial();
         liveStartPolling();
         renderAll();
         showToast("به «" + social.room.t + "» وصل شدی! 🌐");
       }).catch(function () { showToast("اتصال ناموفق — اینترنت را چک کن ❌"); });
     });
-    var b3 = document.createElement("button");
-    b3.type = "button";
-    b3.className = "footer-btn";
-    b3.textContent = "⚙️ تغییر آدرس اتصال";
-    b3.addEventListener("click", function () {
-      if (!window.confirm("آدرس اتصال پاک شود؟")) return;
-      social.dbUrl = "";
-      social.room = null;
-      saveSocial();
-      liveStopPolling();
-      liveData = null;
-      renderAll();
-    });
     btns.appendChild(b1);
     btns.appendChild(b2);
-    btns.appendChild(b3);
     main.appendChild(btns);
     return;
   }
@@ -4254,8 +4246,24 @@ function floatFx(txt, atEl, cls) {
   setTimeout(function () { if (f.parentNode) f.parentNode.removeChild(f); }, 1500);
 }
 
+function logTx(cur, n, why) {
+  if (!state || !n) return;
+  if (!Array.isArray(state.ledger)) state.ledger = [];
+  state.ledger.push({
+    id: "tx" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+    t: Date.now(),
+    cur: cur,
+    amt: Math.round(n),
+    why: String(why || "").slice(0, 60),
+    uid: (typeof CLOUD === "object" && CLOUD && CLOUD.uid) ? CLOUD.uid : "local",
+    ok: true
+  });
+  if (state.ledger.length > 200) state.ledger.splice(0, state.ledger.length - 200);
+}
+
 function addXp(n, why) {
   if (!n) return;
+  logTx("xp", n, why);
   var before = lvlOf(state.xp || 0);
   state.xp = (state.xp || 0) + n;
   var after = lvlOf(state.xp);
@@ -4276,6 +4284,7 @@ function checkBadges() { if (state && state.badges) renderBadges(); }
 
 function addCoins(n, why) {
   if (!n) return;
+  logTx("coins", n, why);
   state.coins = Math.max(0, (state.coins || 0) + n);
   scheduleSave();
   if (n > 0) floatFx("🪙 +" + toFa(n));
@@ -4345,7 +4354,15 @@ function onTickRewards(el, taskId) {
 
 function onTrackerChange(id, old, val, def) {
   var step = def.step || 1;
-  if (val > old) {
+  var today = todayKey();
+  if (!state.trkAward || typeof state.trkAward !== "object") state.trkAward = {};
+  var tw = state.trkAward[today];
+  if (!tw) { tw = {}; state.trkAward[today] = tw; }
+  var wm = tw[id];
+  if (typeof wm !== "number") wm = old;
+  // فقط رکورد جدیدِ امروز پاداش می‌گیرد؛ کم‌کردن و زیاد‌کردن دوباره سکه نمی‌سازد
+  if (val > wm) {
+    tw[id] = val;
     if (id === "water") { addCoins(1, "لیوان آب"); if (state.cat) state.cat.e = Math.min(100, state.cat.e + 2); }
     if (id === "book") { addXp(2, "کتاب‌خوانی"); addCoins(2, "کتاب‌خوانی"); if (state.cat) state.cat.j = Math.min(100, state.cat.j + 2); }
   }
@@ -4427,6 +4444,8 @@ function renderMissions() {
       var btn = document.createElement("button"); btn.type = "button"; btn.className = "mis-btn"; btn.textContent = "🎁 جایزه";
       (function (d) {
         btn.addEventListener("click", function () {
+          if (state.missions.claimed[d.id] === true) return;
+          if (!d.chk()) { renderMissions(); return; }
           state.missions.claimed[d.id] = true;
           addXp(d.xp, "مأموریت: " + d.txt);
           addCoins(d.coins, "مأموریت: " + d.txt);
@@ -4538,14 +4557,18 @@ function gameGuess(body) {
   var box = gameShell(body, "🎯 حدس عدد ۱ تا ۱۰۰");
   var target = 1 + Math.floor(Math.random() * 100);
   var tries = 0;
+  var finished = false;
   var msg = document.createElement("div"); msg.className = "gb-msg"; msg.textContent = "عدد من کجاست؟ حدس بزن! 🤔";
   var inp = document.createElement("input"); inp.type = "number"; inp.className = "gb-num"; inp.min = 1; inp.max = 100;
   var btn = document.createElement("button"); btn.type = "button"; btn.className = "gb-btn"; btn.textContent = "حدس بزن";
   function tryIt() {
+    if (finished) return;
     var v = parseInt(inp.value, 10);
     if (!v || v < 1 || v > 100) { msg.textContent = "عدد بین ۱ تا ۱۰۰ بگو"; return; }
     tries++;
     if (v === target) {
+      finished = true;
+      btn.disabled = true; inp.disabled = true;
       var pts = Math.max(3, 13 - tries);
       msg.textContent = "🎉 درست بود! با " + toFa(tries) + " حدس — " + toFa(pts) + " امتیاز";
       gameEarn("guess", pts);
@@ -4564,11 +4587,15 @@ function gameGuess(body) {
 // ۲) دنباله اعداد
 function gameSeq(body) {
   var box = gameShell(body, "🔢 عدد بعدی کدام است؟");
-  var score = 0, round = 0, answer = 0;
+  var score = 0, round = 0, answer = 0, finished = false;
   var q = document.createElement("div"); q.style.cssText = "font-size:1.4rem;font-weight:bold;text-align:center;margin:14px 0;direction:ltr";
   var opts = document.createElement("div"); opts.className = "seq-options";
   var msg = document.createElement("div"); msg.className = "gb-msg";
   box.appendChild(q); box.appendChild(opts); box.appendChild(msg);
+  function lockOpts() {
+    var obs = opts.querySelectorAll("button");
+    for (var bi = 0; bi < obs.length; bi++) obs[bi].disabled = true;
+  }
   function gen() {
     round++;
     opts.textContent = ""; msg.textContent = "";
@@ -4584,8 +4611,18 @@ function gameSeq(body) {
       var ob = document.createElement("button"); ob.type = "button"; ob.textContent = toFa(arr[oi]);
       (function (val) {
         ob.addEventListener("click", function () {
-          if (val === answer) { score += 2; msg.textContent = "✅ درست! (" + toFa(score) + " امتیاز)"; haptic(15); if (round >= 5) { var earned = gameEarn("seq", score); msg.textContent = "🏆 تموم شد! " + toFa(earned) + " امتیاز"; setTimeout(function () { startGame("seq"); }, 1500); } else setTimeout(gen, 700); }
-          else { msg.textContent = "❌ نه! دوباره فکر کن"; haptic(30); }
+          if (finished) return;
+          if (val === answer) {
+            score += 2;
+            msg.textContent = "✅ درست! (" + toFa(score) + " امتیاز)";
+            haptic(15);
+            if (round >= 5) {
+              finished = true; lockOpts();
+              var earned = gameEarn("seq", score);
+              msg.textContent = "🏆 تموم شد! " + toFa(earned) + " امتیاز";
+              setTimeout(function () { startGame("seq"); }, 1500);
+            } else setTimeout(gen, 700);
+          } else { msg.textContent = "❌ نه! دوباره فکر کن"; haptic(30); }
         });
       })(arr[oi]);
       opts.appendChild(ob);
@@ -4643,14 +4680,21 @@ function gameMem(body) {
 function gameSudoku(body) {
   var box = gameShell(body, "🔠 سودوکو ۴×۴ — هر ردیف/ستون/خانه ۱ تا ۴");
   var base = [[1, 2, 3, 4], [3, 4, 1, 2], [2, 1, 4, 3], [4, 3, 2, 1]];
-  // شافل ساده: جابجایی سطرها/ستون‌ها و تعویض ارقام
+  var grid = base.map(function (row) { return row.slice(); });
+  function swapRows(a, b) { var tr = grid[a]; grid[a] = grid[b]; grid[b] = tr; }
+  function swapCols(a, b) {
+    for (var sr = 0; sr < 4; sr++) { var tc = grid[sr][a]; grid[sr][a] = grid[sr][b]; grid[sr][b] = tc; }
+  }
+  // فقط تبدیل‌های معتبر سودوکو؛ ردیف/ستون تکراری ساخته نمی‌شود
+  if (Math.random() < 0.5) swapRows(0, 1);
+  if (Math.random() < 0.5) swapRows(2, 3);
+  if (Math.random() < 0.5) { swapRows(0, 2); swapRows(1, 3); }
+  if (Math.random() < 0.5) swapCols(0, 1);
+  if (Math.random() < 0.5) swapCols(2, 3);
+  if (Math.random() < 0.5) { swapCols(0, 2); swapCols(1, 3); }
   var perm = [1, 2, 3, 4];
   for (var s = perm.length - 1; s > 0; s--) { var sj = Math.floor(Math.random() * (s + 1)); var st = perm[s]; perm[s] = perm[sj]; perm[sj] = st; }
-  var grid = base.map(function (row, ri) {
-    var r2 = (ri % 2 === 1) ? row.slice().reverse() : row.slice();
-    return r2.map(function (v) { return perm[v - 1]; });
-  });
-  if (Math.random() < 0.5) grid = grid.map(function (r) { return r; }).reverse();
+  grid = grid.map(function (row) { return row.map(function (v) { return perm[v - 1]; }); });
   var holes = [];
   for (var hr = 0; hr < 4; hr++) for (var hc = 0; hc < 4; hc++) holes.push([hr, hc]);
   var removed = 0;
@@ -4684,7 +4728,9 @@ function gameSudoku(body) {
       })(r3, c3);
     }
   }
+  var solved = false;
   checkBtn.addEventListener("click", function () {
+    if (solved) return;
     var ok = true;
     for (var r4 = 0; r4 < 4; r4++) for (var c4 = 0; c4 < 4; c4++) {
       var cellEl = gEl.children[r4 * 4 + c4];
@@ -4692,7 +4738,7 @@ function gameSudoku(body) {
       if (v !== sol[r4][c4]) { ok = false; if (puzzle[r4][c4] === 0) cellEl.classList.add("bad"); }
       else cellEl.classList.remove("bad");
     }
-    if (ok) { var earned = gameEarn("sudoku", 15); msg.textContent = "🏆 درست حل شد! " + toFa(earned) + " امتیاز"; haptic([20, 40, 20]); setTimeout(function () { startGame("sudoku"); }, 1800); }
+    if (ok) { solved = true; checkBtn.disabled = true; var earned = gameEarn("sudoku", 15); msg.textContent = "🏆 درست حل شد! " + toFa(earned) + " امتیاز"; haptic([20, 40, 20]); setTimeout(function () { startGame("sudoku"); }, 1800); }
     else { msg.textContent = "یه جاهاش غلطه — قرمزها رو درست کن"; haptic(30); }
   });
 }
@@ -4719,9 +4765,11 @@ function gameRiddle(body) {
   var box = gameShell(body, "🧩 معمای روز");
   var idx = hashStr("riddle-" + todayKey()) % RIDDLES.length;
   var r = RIDDLES[idx];
+  var already = !!(state.games && state.games.riddleDay === todayKey());
   var q = document.createElement("div"); q.style.cssText = "font-weight:bold;font-size:.95rem;line-height:2"; q.textContent = r.q;
   var opts = document.createElement("div"); opts.className = "seq-options"; opts.style.flexDirection = "column";
   var msg = document.createElement("div"); msg.className = "gb-msg";
+  if (already) msg.textContent = "امروز جواب این معما را دادی؛ فردا معمای تازه ⏳";
   box.appendChild(q); box.appendChild(opts); box.appendChild(msg);
   var won = false;
   for (var i = 0; i < r.o.length; i++) {
@@ -4731,6 +4779,13 @@ function gameRiddle(body) {
         if (won) return;
         if (oi === r.a) {
           won = true;
+          if (already) {
+            msg.textContent = "✔ جواب درست است، ولی پاداش امروزش را گرفته‌ای";
+            return;
+          }
+          already = true;
+          if (!state.games) state.games = { rec: {}, wins: {}, earned: {} };
+          state.games.riddleDay = todayKey();
           var earned = gameEarn("riddle", 10);
           msg.textContent = "🎉 درسته! " + toFa(earned) + " امتیاز (فقط روزی یک‌بار)";
           haptic([20, 40, 20]);
@@ -5002,6 +5057,9 @@ function renderCat() {
   img.src = "cat-stage-" + (stage + 1 < 10 ? "0" + (stage + 1) : String(stage + 1)) + ".jpg";
   img.alt = CAT_STAGES[stage].name;
   img.decoding = "async";
+  img.loading = "lazy";
+  img.width = 300;
+  img.height = 220;
   img.onerror = function () {
     wrap.textContent = "";
     wrap.innerHTML = catSvg(stage, { toys: cat.toys, sleeping: cat.e < 15 });
@@ -5081,6 +5139,8 @@ function renderCat() {
     if (!own) {
       (function (ty) {
         chip.addEventListener("click", function () {
+          // کلیک دوباره روی همان دکمه نباید سکه را دوباره کم کند
+          if (state.cat.toys.indexOf(ty.id) !== -1) return;
           if ((state.coins || 0) < ty.price) { catMsg("سکه کمه! کارها و مأموریت‌ها رو انجام بده 🪙"); return; }
           state.coins -= ty.price;
           state.cat.toys.push(ty.id);
@@ -5237,7 +5297,14 @@ function renderProfile() {
   }
   row.appendChild(colRow);
   if ($("pfName") && document.activeElement !== $("pfName")) $("pfName").value = state.myName || "";
-  $("privShare").checked = state.privacy.share !== false;
+  var pvR = myPrivacy();
+  if ($("privShare")) $("privShare").checked = pvR.share;
+  if ($("privName")) $("privName").checked = pvR.name;
+  if ($("privScore")) $("privScore").checked = pvR.score;
+  if ($("privMedals")) $("privMedals").checked = pvR.medals;
+  if ($("privCat")) $("privCat").checked = pvR.cat;
+  if ($("privFeed")) $("privFeed").checked = pvR.feed;
+  if ($("privOnline")) $("privOnline").checked = pvR.online;
   // آمار خلاصه
   var st = $("pfStats");
   st.textContent = "";
@@ -5384,7 +5451,10 @@ function cloudAttachUser(u) {
     CLOUD.ok = true;
     cloudSetStatus("☁️ آنلاین ✅");
     cloudPush(true);
+    cloudEnsureFriendLinks();
     cloudLoadFriends();
+    cloudMigrateLegacyFeed();
+    cloudLoadFriendsFeed();
     renderCloud();
     cloudStartPoll();
     cloudHandleParam();
@@ -5695,19 +5765,62 @@ function acctCloseDelete() {
   $("acctMCancel").disabled = false;
 }
 
+function acctEachQuery(q, fn, size) {
+  var n = 0;
+  function step() {
+    return q.limit(size || 50).get().then(function (qs) {
+      if (!qs.size) return n;
+      return Promise.all(qs.docs.map(function (d) {
+        return fn(d).then(function () { n++; });
+      })).then(function () { return qs.size < (size || 50) ? n : step(); });
+    });
+  }
+  return step();
+}
+
+function acctDeleteQuery(q, size) {
+  return acctEachQuery(q, function (d) { return d.ref.delete(); }, size);
+}
+
 function acctWipeCloud(u, invite) {
   CLOUD.ok = false; CLOUD.me = null;
   if (CLOUD.pollT) { clearInterval(CLOUD.pollT); CLOUD.pollT = null; }
   clearTimeout(CLOUD.pushT);
   var db = CLOUD.db;
+  var failed = 0;
+  var counts = { posts: 0, rooms: 0, roomsLeft: 0, legacy: 0 };
+  function safe(p, key) {
+    return p.then(function (n) { if (key) counts[key] += (n || 0); })
+      .catch(function () { failed++; });
+  }
   var jobs = [];
-  jobs.push(db.collection("users").doc(u.uid).delete());
-  jobs.push(db.collection("publicProfiles").doc(u.uid).delete());
-  if (invite) jobs.push(db.collection("invites").doc(invite).delete());
-  jobs.push(db.collection("feed").where("uid", "==", u.uid).limit(100).get().then(function (qs) {
-    return Promise.all(qs.docs.map(function (d) { return d.ref.delete(); }));
-  }));
-  return Promise.all(jobs);
+  jobs.push(safe(db.collection("users").doc(u.uid).delete()));
+  jobs.push(safe(db.collection("publicProfiles").doc(u.uid).delete()));
+  jobs.push(safe(db.collection("friendships").doc(u.uid).delete()));
+  jobs.push(safe(db.collection("backups").doc(u.uid).delete()));
+  if (invite) jobs.push(safe(db.collection("invites").doc(invite).delete()));
+  // پست‌های فید جدید (صفحه‌بندی‌شده، بدون سقف ۱۰۰)
+  jobs.push(safe(acctDeleteQuery(db.collection("feed").doc(u.uid).collection("posts"), 50), "posts"));
+  // پست‌های فید قدیمی سطح‌بالا
+  jobs.push(safe(acctDeleteQuery(db.collection("feed").where("uid", "==", u.uid), 50), "legacy"));
+  // اتاق‌هایی که میزبانشان این کاربر است
+  jobs.push(safe(acctEachQuery(db.collection("rooms").where("h", "==", u.uid), function (d) {
+    return d.ref.delete();
+  }), "rooms"));
+  // اتاق‌هایی که مهمانشان این کاربر است: جای مهمان آزاد می‌شود
+  jobs.push(safe(acctEachQuery(db.collection("rooms").where("g", "==", u.uid), function (d) {
+    return d.ref.update({ g: null, gnn: "", gav: "" });
+  }), "roomsLeft"));
+  // عضویت در اتاق‌های لایو قدیمی (RTDB) هم پاک شود
+  if (social && social.room && social.room.code && /^[A-Z0-9]{6}$/.test(social.room.code)) {
+    jobs.push(safe(liveFetch(liveBase() + "/members/" + u.uid + ".json", { method: "DELETE" }).then(function (r) {
+      if (!r.ok) throw new Error("rtdb" + r.status);
+    })));
+  }
+  return Promise.all(jobs).then(function () {
+    if (failed) { var e = new Error("partial wipe"); e.code = "wipe/partial"; e.failed = failed; e.counts = counts; throw e; }
+    return counts;
+  });
 }
 
 function acctDeleteRun() {
@@ -5724,10 +5837,7 @@ function acctDeleteRun() {
   var email = u.email || "";
   var invite = (CLOUD.me && CLOUD.me.invite) || null;
   var uid = u.uid;
-  acctWipeCloud(u, invite).catch(function () {
-    // اگر حذف یکی از داده‌ها نشد، ادامه نده تا حساب نیمه‌حذف نشود
-    throw { code: "wipe/failed" };
-  }).then(function () {
+  acctWipeCloud(u, invite).then(function () {
     return u.delete();
   }).catch(function (e) {
     if (e && e.code === "auth/requires-recent-login") {
@@ -5751,7 +5861,9 @@ function acctDeleteRun() {
   }).catch(function (e) {
     $("acctMGo").disabled = false;
     $("acctMCancel").disabled = false;
-    $("acctMErr").textContent = (e && e.code === "wipe/failed")
+    $("acctMErr").textContent = (e && e.code === "wipe/partial")
+      ? ("حذف کامل نشد — " + toFa(e.failed || 1) + " مورد ناموفق. اینترنت را بررسی کن و دوباره تلاش کن؛ حساب هنوز حذف نشده است.")
+      : (e && e.code === "wipe/failed")
       ? "حذف داده‌های ابری انجام نشد — اینترنت/دسترسی را بررسی کن و دوباره امتحان کن ❌"
       : acctErr(e);
   });
@@ -5797,11 +5909,34 @@ function cloudMonthScore() {
 
 function cloudPushSoon() { if (!CLOUD.ok) return; clearTimeout(CLOUD.pushT); CLOUD.pushT = setTimeout(function () { cloudPush(false); }, 2500); }
 
+function myPrivacy() {
+  var p = (state && state.privacy) || {};
+  return {
+    share: p.share !== false,
+    name: p.name !== false,
+    score: p.score !== false,
+    medals: p.medals !== false,
+    cat: p.cat !== false,
+    feed: p.feed !== false,
+    online: p.online === true
+  };
+}
+
+function cloudEnsureFriendLinks() {
+  if (!CLOUD.ok || !CLOUD.me) return;
+  var fids = CLOUD.me.friends || [];
+  if (!fids.length) return;
+  var links = {};
+  for (var i = 0; i < fids.length; i++) links[fids[i]] = true;
+  CLOUD.db.collection("friendships").doc(CLOUD.uid).set({ links: links }, { merge: true }).catch(function () {});
+}
+
 function cloudPush(force) {
   if (!CLOUD.ok || !CLOUD.me) return;
   var today = todayKey();
   var day = cloudDayScore();
   var week = cloudWeekScore();
+  var pv = myPrivacy();
   var dayPrev = (CLOUD.me.days && CLOUD.me.days[today]) || 0;
   // امتیاز ابری با دستگاه خالی/بازیابی عقب برنمی‌گردد
   if (day < dayPrev) day = dayPrev;
@@ -5815,9 +5950,9 @@ function cloudPush(force) {
     xp: Math.max(CLOUD.me.xp || 0, Math.min(state.xp || 0, (CLOUD.me.xp || 0) + 100)),
     day: day,
     week: Math.min(week, (CLOUD.me.week || 0) + 60),
-    privacy: { share: state.privacy.share !== false },
+    privacy: pv,
     cat: cloudCatBits(),
-    seen: Date.now()
+    seen: pv.online ? Date.now() : 0
   };
   patch.days = {};
   patch.days[today] = day;
@@ -5827,12 +5962,23 @@ function cloudPush(force) {
   if (!CLOUD.me.days) CLOUD.me.days = {};
   CLOUD.me.days[today] = day;
   CLOUD.db.collection("users").doc(CLOUD.uid).set(patch, { merge: true }).catch(function () {});
-  // نسخه‌ی عمومی و کم‌داده برای جدول/دوستان؛ فهرست دوستان، کد دعوت و داده‌های خصوصی اینجا نیست
+  // نسخه‌ی عمومی و کم‌داده؛ هر فیلد فقط با اجازه‌ی جداگانه‌ی کاربر منتشر می‌شود
   var pubRef = CLOUD.db.collection("publicProfiles").doc(CLOUD.uid);
-  if (state.privacy.share === false) {
+  if (!pv.share) {
     pubRef.delete().catch(function () {});
   } else {
-    var pub = { name: patch.name, av: patch.av, col: patch.col, day: patch.day, week: patch.week, privacy: patch.privacy, cat: patch.cat, seen: patch.seen, days: patch.days };
+    var pub = {
+      name: pv.name ? patch.name : "کاربر",
+      av: patch.av,
+      col: patch.col,
+      day: pv.score ? patch.day : 0,
+      week: pv.score ? patch.week : 0,
+      days: pv.score ? patch.days : {},
+      privacy: pv,
+      cat: pv.cat ? patch.cat : null,
+      bd: pv.medals ? Object.keys(state.badges || {}).length : null,
+      seen: pv.online ? patch.seen : 0
+    };
     pubRef.set(pub, { merge: true }).catch(function () {});
   }
   renderCloudStats();
@@ -5844,12 +5990,15 @@ function cloudLoadFriends() {
   var fids = CLOUD.me.friends || [];
   CLOUD.friends = {};
   fids.forEach(function (fid) {
+    // هرگز سند خصوصی کاربران را برای دور زدن حریم خصوصی نمی‌خوانیم
     CLOUD.db.collection("publicProfiles").doc(fid).get().then(function (d) {
-      if (d.exists) { CLOUD.friends[fid] = d.data(); renderCloud(); return; }
-      return CLOUD.db.collection("users").doc(fid).get().then(function (d2) {
-        if (d2.exists) { CLOUD.friends[fid] = d2.data(); renderCloud(); }
-      });
-    }).catch(function () { CLOUD.friends[fid] = { name: "خصوصی 🔒", hidden: true }; renderCloud(); });
+      if (d.exists) CLOUD.friends[fid] = d.data();
+      else CLOUD.friends[fid] = { name: "خصوصی 🔒", hidden: true };
+      renderCloud();
+    }).catch(function () {
+      CLOUD.friends[fid] = { name: "خصوصی 🔒", hidden: true };
+      renderCloud();
+    });
   });
 }
 
@@ -5865,12 +6014,35 @@ function cloudAddFriendByCode() {
     var fid = iv.data().uid;
     if (!fid || CLOUD.me.friends.indexOf(fid) !== -1) { showToast("این دوست قبلاً اضافه شده ✔"); return; }
     CLOUD.me.friends.push(fid);
-    CLOUD.db.collection("users").doc(CLOUD.uid).set({ friends: CLOUD.me.friends }, { merge: true }).then(function () {
+    var linkPatch = { links: {} };
+    linkPatch.links[fid] = true;
+    Promise.all([
+      CLOUD.db.collection("users").doc(CLOUD.uid).set({ friends: CLOUD.me.friends }, { merge: true }),
+      CLOUD.db.collection("friendships").doc(CLOUD.uid).set(linkPatch, { merge: true })
+    ]).then(function () {
       cloudLoadFriends();
       showToast("دوست اضافه شد 🎉");
       $("cloudCodeIn").value = "";
     }).catch(function () { CLOUD.me.friends.pop(); showToast("افزودن دوست ناموفق بود ❌"); });
   }).catch(function () { cloudSetStatus("☁️ آنلاین ✅"); showToast("جستجو ناموفق بود ❌"); });
+}
+
+function cloudRemoveFriend(fid) {
+  if (!CLOUD.ok || !CLOUD.me || !fid) return;
+  if (!window.confirm("این دوست از لیست حذف شود؟ دیگر فید هم را نمی‌بینید.")) return;
+  var left = (CLOUD.me.friends || []).filter(function (x) { return x !== fid; });
+  var patch = {};
+  patch["links." + fid] = firebase.firestore.FieldValue.delete();
+  Promise.all([
+    CLOUD.db.collection("users").doc(CLOUD.uid).set({ friends: left }, { merge: true }),
+    CLOUD.db.collection("friendships").doc(CLOUD.uid).update(patch)
+  ]).then(function () {
+    CLOUD.me.friends = left;
+    delete CLOUD.friends[fid];
+    renderCloud();
+    cloudLoadFriendsFeed();
+    showToast("دوست حذف شد");
+  }).catch(function () { showToast("حذف دوست ناموفق بود ❌"); });
 }
 
 function cloudCopyMyCode() {
@@ -5941,14 +6113,15 @@ function cloudStartPoll() {
 
 // فید
 function cloudFeedPost(txt) {
-  if (!CLOUD.ok || state.privacy.share === false) return;
+  var pv = myPrivacy();
+  if (!CLOUD.ok || !pv.share || !pv.feed) return;
   var now = Date.now();
   if (!cloudFeedPost.last) cloudFeedPost.last = {};
   // هر نوع پیام حداقل ۳ دقیقه فاصله
   var key = txt.slice(0, 6);
   if (cloudFeedPost.last[key] && now - cloudFeedPost.last[key] < 180000) return;
   cloudFeedPost.last[key] = now;
-  CLOUD.db.collection("feed").add({
+  CLOUD.db.collection("feed").doc(CLOUD.uid).collection("posts").add({
     uid: CLOUD.uid,
     name: (state.myName || "کاربر").slice(0, 40),
     av: (state.profile && state.profile.av) || "😺",
@@ -5959,19 +6132,71 @@ function cloudFeedPost(txt) {
   }).catch(function () {});
 }
 
+// فید فقط از پست‌های خودم و دوستانی که اجازه‌ی اشتراک داده‌اند خوانده می‌شود
 function cloudLoadFriendsFeed() {
-  if (!CLOUD.ok) return;
-  CLOUD.db.collection("feed").orderBy("t", "desc").limit(25).get().then(function (qs) {
-    CLOUD.feed = qs.docs.map(function (d) { var v = d.data(); v.id = d.id; return v; });
+  if (!CLOUD.ok || !CLOUD.me) return;
+  var jobs = [];
+  function loadOne(owner) {
+    return CLOUD.db.collection("feed").doc(owner).collection("posts").orderBy("t", "desc").limit(20).get().then(function (qs) {
+      return qs.docs.map(function (d) { var v = d.data(); v.id = d.id; v.owner = owner; return v; });
+    }).catch(function () { return []; });
+  }
+  jobs.push(loadOne(CLOUD.uid));
+  var fids = (CLOUD.me.friends || []).slice(0, 50);
+  for (var i = 0; i < fids.length; i++) jobs.push(loadOne(fids[i]));
+  Promise.all(jobs).then(function (arrs) {
+    var seen = {};
+    var all = [];
+    for (var a = 0; a < arrs.length; a++) {
+      for (var b = 0; b < arrs[a].length; b++) {
+        var it = arrs[a][b];
+        var k = it.owner + "|" + it.id;
+        if (!seen[k]) { seen[k] = true; all.push(it); }
+      }
+    }
+    all.sort(function (x, y) { return (y.t || 0) - (x.t || 0); });
+    CLOUD.feed = all.slice(0, 25);
     renderCloudFeed();
   }).catch(function () {});
 }
 
-function cloudReact(fid, emoji) {
-  if (!CLOUD.ok) return;
+// انتقال یک‌باره‌ی پست‌های قدیمی سطح‌بالا به فید شخصی، تا اطلاعات از بین نرود
+function cloudMigrateLegacyFeed() {
+  if (!CLOUD.ok || !CLOUD.uid) return;
+  var key = "kr_feed_migrated_" + CLOUD.uid;
+  try { if (window.localStorage.getItem(key)) return; } catch (e) {}
+  var failed = false;
+  function page() {
+    return CLOUD.db.collection("feed").where("uid", "==", CLOUD.uid).limit(50).get().then(function (qs) {
+      if (!qs.size) return true;
+      return Promise.all(qs.docs.map(function (d) {
+        var v = d.data() || {};
+        var post = {
+          uid: CLOUD.uid,
+          name: (typeof v.name === "string" ? v.name : "کاربر").slice(0, 40),
+          av: (typeof v.av === "string" ? v.av : "😺").slice(0, 4),
+          col: (typeof v.col === "string" && /^#[0-9a-fA-F]{6}$/.test(v.col)) ? v.col : "#6366f1",
+          txt: (typeof v.txt === "string" ? v.txt : "").slice(0, 120),
+          t: typeof v.t === "number" ? v.t : Date.now(),
+          re: {}
+        };
+        return CLOUD.db.collection("feed").doc(CLOUD.uid).collection("posts").add(post).then(function () {
+          return d.ref.delete();
+        }).catch(function () { failed = true; });
+      })).then(function () { return qs.size < 50 ? true : page(); });
+    });
+  }
+  page().then(function () {
+    if (!failed) { try { window.localStorage.setItem(key, "1"); } catch (e) {} }
+    cloudLoadFriendsFeed();
+  }).catch(function () {});
+}
+
+function cloudReact(owner, fid, emoji) {
+  if (!CLOUD.ok || !owner || !fid) return;
   var patch = {};
-  patch["re." + CLOUD.uid] = emoji;
-  CLOUD.db.collection("feed").doc(fid).update(patch).then(function () {
+  patch["re." + CLOUD.uid] = emoji ? emoji : firebase.firestore.FieldValue.delete();
+  CLOUD.db.collection("feed").doc(owner).collection("posts").doc(fid).update(patch).then(function () {
     cloudLoadFriendsFeed();
   }).catch(function () {});
 }
@@ -6015,8 +6240,12 @@ function renderCloudLb() {
   if (CLOUD.me) rows.push({ name: state.myName || "من", av: (state.profile && state.profile.av) || "😺", col: (state.profile && state.profile.col) || "#6366f1", me: true, v: CLOUD.lb === "day" ? (CLOUD.me.day || 0) : CLOUD.lb === "week" ? (CLOUD.me.week || 0) : cloudMonthScore() });
   for (var fid in CLOUD.friends) {
     var f = CLOUD.friends[fid];
-    if (f.hidden) rows.push({ name: "خصوصی", av: "🔒", col: "#94a3b8", me: false, v: null });
-    else rows.push({ name: f.name || "دوست", av: f.av || "😺", col: f.col || "#6366f1", me: false, v: f.day != null ? (CLOUD.lb === "day" ? (f.day || 0) : CLOUD.lb === "week" ? (f.week || 0) : (f.days ? cloudSumMonth(f.days) : 0)) : null });
+    if (f.hidden) { rows.push({ name: "خصوصی", av: "🔒", col: "#94a3b8", me: false, v: null, fid: fid }); continue; }
+    var fv = f.day != null ? (CLOUD.lb === "day" ? (f.day || 0) : CLOUD.lb === "week" ? (f.week || 0) : (f.days ? cloudSumMonth(f.days) : 0)) : null;
+    if (f.privacy && f.privacy.score === false) fv = null;
+    var fname = (f.privacy && f.privacy.name === false) ? "خصوصی" : (f.name || "دوست");
+    var fav = (f.privacy && f.privacy.name === false) ? "🔒" : (f.av || "😺");
+    rows.push({ name: fname, av: fav, col: f.col || "#6366f1", me: false, v: fv, fid: fid, bd: (f.privacy && f.privacy.medals === false) ? null : f.bd });
   }
   rows.sort(function (a, b) { return (b.v || 0) - (a.v || 0); });
   var anyFriend = Object.keys(CLOUD.friends).length;
@@ -6039,6 +6268,17 @@ function renderCloudLb() {
     var sc = document.createElement("span"); sc.className = "lb-score";
     sc.textContent = row.v == null ? "—" : toFa(row.v) + " امتیاز";
     el.appendChild(rk); el.appendChild(av); el.appendChild(nm); el.appendChild(sc);
+    if (row.bd != null) {
+      var bd = document.createElement("span"); bd.className = "lb-score"; bd.textContent = "🏅 " + toFa(row.bd);
+      el.appendChild(bd);
+    }
+    if (row.fid) {
+      var del = document.createElement("button");
+      del.type = "button"; del.textContent = "✖"; del.title = "حذف دوست";
+      del.style.cssText = "border:0;background:transparent;color:var(--muted);font-size:.8rem;padding:2px 4px;cursor:pointer";
+      (function (id2) { del.addEventListener("click", function () { cloudRemoveFriend(id2); }); })(row.fid);
+      el.appendChild(del);
+    }
     box.appendChild(el);
   }
 }
@@ -6151,7 +6391,7 @@ function renderCloudFeed() {
         var mine = re[CLOUD.uid] === emo;
         b.className = "feed-react" + (mine ? " mine" : "");
         b.textContent = emo + (counts[emo] ? " " + toFa(counts[emo]) : "");
-        b.addEventListener("click", function () { cloudReact(f.id, mine ? null : emo); });
+        b.addEventListener("click", function () { cloudReact(f.owner, f.id, mine ? null : emo); });
         reactRow.appendChild(b);
       })(RE[ri]);
     }
@@ -6186,7 +6426,7 @@ function renderCloud() {
 
 var BACKUP_APP = "karhaye-roozane";
 var BACKUP_VER = 2;
-var APP_VER = "3.3.1";
+var APP_VER = "3.4.0";
 var pendingImport = null;
 var importTries = 0;
 
@@ -6231,6 +6471,76 @@ function exportData() {
   }
   var plain = { app: BACKUP_APP, v: BACKUP_VER, exportedAt: Date.now(), enc: false, tz: state.tz || browserTz(), data: state };
   writeBackupText(JSON.stringify(plain, null, 2), false);
+}
+
+// پشتیبان ابری اختیاری: کل داده با رمز خودِ کاربر رمزگذاری می‌شود؛ کلید هرگز به سرور نمی‌رود
+function cloudBackupUp() {
+  if (!CLOUD.ok || !CLOUD.db || !CLOUD.uid) { showToast("اول آنلاین/وارد حساب شو ☁️"); return; }
+  var u = CLOUD.auth && CLOUD.auth.currentUser;
+  if (!u || u.isAnonymous) { showToast("برای پشتیبان ابری اول با ایمیل یا گوگل وارد شو 🔐"); return; }
+  var pin = window.prompt("رمز پشتیبان ابری (حداقل ۶ کاراکتر) — همین رمز را برای بازیابی لازم داری:", "");
+  if (pin === null) return;
+  if ((pin || "").length < 6) { showToast("رمز حداقل ۶ کاراکتر باشد ❌"); return; }
+  var pin2 = window.prompt("رمز را دوباره وارد کن:", "");
+  if (pin2 !== pin) { showToast("رمزها یکسان نیستند ❌"); return; }
+  var salt = crypto.getRandomValues(new Uint8Array(16));
+  showToast("در حال رمزگذاری و آپلود… ⏳");
+  deriveKey(pin, salt).then(function (k) {
+    return encryptText(k, salt, JSON.stringify(state));
+  }).then(function (blob) {
+    if (blob.length > 850000) throw { code: "backup/too-large" };
+    return CLOUD.db.collection("backups").doc(CLOUD.uid).set({
+      blob: blob,
+      t: Date.now(),
+      v: 1,
+      tz: state.tz || browserTz()
+    });
+  }).then(function () {
+    showToast("پشتیبان ابری رمزدار ذخیره شد ☁️🔐");
+  }).catch(function (e) {
+    if (e && e.code === "backup/too-large") showToast("حجم داده برای پشتیبان ابری زیاد است؛ از پشتیبان فایل استفاده کن ❌");
+    else showToast("پشتیبان ابری ناموفق بود — اینترنت/دسترسی را بررسی کن ❌");
+  });
+}
+
+function cloudBackupDown() {
+  if (!CLOUD.ok || !CLOUD.db || !CLOUD.uid) { showToast("اول آنلاین/وارد حساب شو ☁️"); return; }
+  var u = CLOUD.auth && CLOUD.auth.currentUser;
+  if (!u || u.isAnonymous) { showToast("برای بازیابی ابری اول با ایمیل یا گوگل وارد شو 🔐"); return; }
+  CLOUD.db.collection("backups").doc(CLOUD.uid).get().then(function (d) {
+    if (!d.exists) { showToast("پشتیبان ابری برای این حساب پیدا نشد"); return; }
+    var doc = d.data() || {};
+    var blob = doc.blob;
+    if (typeof blob !== "string" || blob.indexOf(LOCK_PREFIX) !== 0) { showToast("پشتیبان ابری خراب است ❌"); return; }
+    var pin = window.prompt("رمز پشتیبان ابری را وارد کن:", "");
+    if (pin === null) return;
+    var parts = blob.slice(LOCK_PREFIX.length).split("|");
+    if (parts.length !== 3) { showToast("پشتیبان ابری خراب است ❌"); return; }
+    return deriveKey(pin, b642buf(parts[0])).then(function (k) {
+      return crypto.subtle.decrypt({ name: "AES-GCM", iv: b642buf(parts[1]) }, k, b642buf(parts[2]));
+    }).then(function (pt) {
+      var incoming = JSON.parse(new TextDecoder().decode(pt));
+      if (!isUsableBackupData(incoming)) throw new Error("bad");
+      incoming = sanitize(incoming);
+      if (!window.confirm("داده‌های فعلی این دستگاه با پشتیبان ابری جایگزین شود؟ (فایل پشتیبان محلی جداگانه بگیر)")) return;
+      state = incoming;
+      if (!state.tz) state.tz = browserTz();
+      acctAfterLocalReplace();
+      ensureCat(); ensureProfile(); ensureMissions();
+      snapshotDay();
+      saveState();
+      renderAll();
+      renderProfile();
+      renderBackupInfo();
+      switchTab(state.tab || "home");
+      cloudPush(true);
+      showToast("از پشتیبان ابری بازیابی شد ✅");
+    }).catch(function () {
+      showToast("رمز اشتباه یا پشتیبان آسیب‌دیده ❌");
+    });
+  }).catch(function () {
+    showToast("دریافت پشتیبان ابری ناموفق بود ❌");
+  });
 }
 
 function backupAgeLabel(ts) {
@@ -6681,6 +6991,9 @@ function sanitize(s) {
         if (/^\d{4}-\d{2}-\d{2}$/.test(gek) && typeof gev === "number" && gev > 0 && gev <= 500) clean.games.earned[gek] = Math.round(gev);
       }
     }
+    clean.games.winsToday = (typeof s.games.winsToday === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s.games.winsToday)) ? s.games.winsToday : null;
+    clean.games.winsTodayN = (typeof s.games.winsTodayN === "number" && s.games.winsTodayN >= 0 && s.games.winsTodayN <= 999) ? Math.round(s.games.winsTodayN) : 0;
+    clean.games.riddleDay = (typeof s.games.riddleDay === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s.games.riddleDay)) ? s.games.riddleDay : null;
   }
   clean.cat = null;
   if (s.cat && typeof s.cat === "object") {
@@ -6710,7 +7023,7 @@ function sanitize(s) {
     }
     var TOY_IDS = ["ball", "mouse", "tower", "crown"];
     if (Array.isArray(s.cat.toys)) {
-      for (var ty = 0; ty < s.cat.toys.length; ty++) if (TOY_IDS.indexOf(s.cat.toys[ty]) !== -1) cc.toys.push(s.cat.toys[ty]);
+      for (var ty = 0; ty < s.cat.toys.length; ty++) if (TOY_IDS.indexOf(s.cat.toys[ty]) !== -1 && cc.toys.indexOf(s.cat.toys[ty]) === -1) cc.toys.push(s.cat.toys[ty]);
     }
     clean.cat = cc;
   }
@@ -6737,8 +7050,63 @@ function sanitize(s) {
       col: (typeof s.profile.col === "string" && /^#[0-9a-fA-F]{6}$/.test(s.profile.col)) ? s.profile.col : "#6366f1"
     };
   }
-  clean.privacy = { share: !(s.privacy && typeof s.privacy === "object" && s.privacy.share === false) };
+  clean.privacy = {
+    share: !!(s.privacy && typeof s.privacy === "object" && s.privacy.share === true),
+    name: !(s.privacy && typeof s.privacy === "object" && s.privacy.name === false),
+    score: !(s.privacy && typeof s.privacy === "object" && s.privacy.score === false),
+    medals: !(s.privacy && typeof s.privacy === "object" && s.privacy.medals === false),
+    cat: !(s.privacy && typeof s.privacy === "object" && s.privacy.cat === false),
+    feed: !(s.privacy && typeof s.privacy === "object" && s.privacy.feed === false),
+    online: !!(s.privacy && typeof s.privacy === "object" && s.privacy.online === true)
+  };
   clean.fullDayAwarded = (typeof s.fullDayAwarded === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s.fullDayAwarded)) ? s.fullDayAwarded : null;
+  clean.moodAwarded = (typeof s.moodAwarded === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s.moodAwarded)) ? s.moodAwarded : null;
+  // ردپای پاداش‌ها برای جلوگیری از تکرار: هر کار/شمارنده در هر روز فقط یک‌بار
+  clean.tickAward = {};
+  if (s.tickAward && typeof s.tickAward === "object") {
+    var taDays = 0;
+    for (var tad in s.tickAward) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(tad) || taDays >= 370) continue;
+      var taMap = s.tickAward[tad];
+      if (!taMap || typeof taMap !== "object") continue;
+      var taClean = {}, taN = 0;
+      for (var tai in taMap) {
+        if (taMap[tai] === true && /^\d{1,20}$/.test(tai) && taN < 200) { taClean[tai] = true; taN++; }
+      }
+      clean.tickAward[tad] = taClean; taDays++;
+    }
+  }
+  clean.trkAward = {};
+  if (s.trkAward && typeof s.trkAward === "object") {
+    var twDays = 0;
+    for (var twd in s.trkAward) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(twd) || twDays >= 370) continue;
+      var twMap = s.trkAward[twd];
+      if (!twMap || typeof twMap !== "object") continue;
+      var twClean = {};
+      if (typeof twMap.water === "number" && twMap.water >= 0 && twMap.water <= 1000) twClean.water = Math.round(twMap.water);
+      if (typeof twMap.book === "number" && twMap.book >= 0 && twMap.book <= 1000) twClean.book = Math.round(twMap.book);
+      clean.trkAward[twd] = twClean; twDays++;
+    }
+  }
+  clean.ledger = [];
+  if (Array.isArray(s.ledger)) {
+    var ledStart = Math.max(0, s.ledger.length - 200);
+    for (var li = ledStart; li < s.ledger.length; li++) {
+      var le = s.ledger[li];
+      if (!le || typeof le !== "object" || (le.cur !== "xp" && le.cur !== "coins")) continue;
+      if (typeof le.amt !== "number" || !isFinite(le.amt) || Math.abs(le.amt) > 1000000) continue;
+      clean.ledger.push({
+        id: (typeof le.id === "string" && le.id.length <= 40) ? le.id : "tx" + li,
+        t: (typeof le.t === "number" && le.t > 0) ? Math.round(le.t) : 0,
+        cur: le.cur,
+        amt: Math.round(le.amt),
+        why: (typeof le.why === "string") ? le.why.slice(0, 60) : "",
+        uid: (typeof le.uid === "string" && le.uid.length <= 128) ? le.uid : "local",
+        ok: le.ok === true
+      });
+    }
+  }
   // 📸 اسنپ‌شات روزانه تا آمار روزهای گذشته با تغییر لیست کارها عوض نشود
   clean.daySnap = {};
   if (s.daySnap && typeof s.daySnap === "object") {
@@ -7081,6 +7449,8 @@ $("noteInput").addEventListener("change", function () { noteFlush(); });
 $("noteInput").addEventListener("blur", function () { noteFlush(); });
 $("exportBtn").addEventListener("click", exportData);
 $("importBtn").addEventListener("click", function () { $("importFile").click(); });
+$("cloudBackupBtn").addEventListener("click", cloudBackupUp);
+$("cloudRestoreBtn").addEventListener("click", cloudBackupDown);
 $("exportBtn2").addEventListener("click", exportData);
 $("importBtn2").addEventListener("click", function () { $("importFile").click(); });
 $("quotaWarnBtn").addEventListener("click", exportData);
@@ -7148,12 +7518,26 @@ if (bootEncrypted) {
     renderFriends();
     showToast("پروفایل ذخیره شد ✅");
   });
-  if ($("privShare")) $("privShare").addEventListener("change", function () {
-    state.privacy.share = $("privShare").checked;
-    saveState();
-    cloudPush(true);
-    showToast($("privShare").checked ? "امتیازهات در باشگاه دیده می‌شه ✅" : "امتیازهات از باشگاه مخفی شد 🕶️");
-  });
+  var PRIV_MAP = [["privShare", "share"], ["privName", "name"], ["privScore", "score"], ["privMedals", "medals"], ["privCat", "cat"], ["privFeed", "feed"], ["privOnline", "online"]];
+  for (var pi = 0; pi < PRIV_MAP.length; pi++) {
+    (function (boxId, key) {
+      var b = $(boxId);
+      if (!b) return;
+      b.addEventListener("change", function () {
+        state.privacy[key] = b.checked;
+        saveState();
+        cloudPush(true);
+        if (key === "share") {
+          showToast(b.checked ? "پروفایلت در باشگاه منتشر شد ✅" : "پروفایلت از باشگاه پنهان شد 🕶️");
+        } else if (key === "feed") {
+          showToast(b.checked ? "فعالیت‌هایت در فید دوستان دیده می‌شود" : "فعالیت‌هایت از فید دوستان پنهان شد 🕶️");
+          cloudLoadFriendsFeed();
+        } else {
+          showToast("حریم خصوصی ذخیره شد ✅");
+        }
+      });
+    })(PRIV_MAP[pi][0], PRIV_MAP[pi][1]);
+  }
   if ($("acctSignIn")) $("acctSignIn").addEventListener("click", function () { acctEmailAuth("in"); });
   if ($("acctSignUp")) $("acctSignUp").addEventListener("click", function () { acctEmailAuth("up"); });
   if ($("acctGoogle")) $("acctGoogle").addEventListener("click", acctGoogleAuth);
@@ -7205,11 +7589,38 @@ if (bootEncrypted) {
   if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
     var hadSwController = !!navigator.serviceWorker.controller;
     var swReloaded = false;
+    function showUpdateBanner() {
+      if (document.getElementById("appUpdateBar")) return;
+      var bar = document.createElement("div");
+      bar.id = "appUpdateBar";
+      bar.setAttribute("role", "status");
+      bar.style.cssText = "position:fixed;left:10px;right:10px;bottom:14px;z-index:99999;display:flex;gap:8px;align-items:center;justify-content:space-between;background:#1e293b;color:#fff;padding:10px 12px;border-radius:14px;font-family:inherit;font-size:.85rem;box-shadow:0 8px 24px rgba(0,0,0,.28)";
+      var t = document.createElement("span");
+      t.textContent = "🔄 نسخه‌ی جدید آماده است";
+      var go = document.createElement("button");
+      go.type = "button"; go.textContent = "به‌روزرسانی";
+      go.style.cssText = "font-family:inherit;font-size:.82rem;border:0;border-radius:10px;padding:7px 12px;background:#6366f1;color:#fff;cursor:pointer";
+      go.addEventListener("click", function () {
+        try { saveState(); } catch (err) {}
+        location.reload();
+      });
+      var x = document.createElement("button");
+      x.type = "button"; x.textContent = "✕";
+      x.setAttribute("aria-label", "بستن");
+      x.style.cssText = "font-family:inherit;border:0;background:transparent;color:#cbd5e1;font-size:1rem;cursor:pointer";
+      x.addEventListener("click", function () { if (bar.parentNode) bar.parentNode.removeChild(bar); });
+      bar.appendChild(t); bar.appendChild(go); bar.appendChild(x);
+      document.body.appendChild(bar);
+    }
     navigator.serviceWorker.addEventListener("controllerchange", function () {
-      if (hadSwController && !swReloaded) { swReloaded = true; location.reload(); }
+      if (!hadSwController || swReloaded) return;
+      swReloaded = true;
+      showUpdateBanner();
     });
     window.addEventListener("load", function () {
-      navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).catch(function () {});
+      navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).then(function (reg) {
+        if (reg && reg.waiting && navigator.serviceWorker.controller) showUpdateBanner();
+      }).catch(function () {});
     });
   }
 })();

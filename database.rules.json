@@ -1,0 +1,28 @@
+{
+  "rules": {
+    "rooms": {
+      "$code": {
+        "t": {
+          ".read": "auth != null",
+          ".write": "auth != null && (!data.exists() || root.child('rooms').child($code).child('members').child(auth.uid).exists())",
+          ".validate": "newData.isString() && newData.val().length <= 60"
+        },
+        "c": {
+          ".write": "auth != null && !data.exists()",
+          ".validate": "newData.isNumber()"
+        },
+        "o": {
+          ".write": "auth != null && !data.exists()",
+          ".validate": "newData.val() === auth.uid"
+        },
+        "members": {
+          ".read": "auth != null && root.child('rooms').child($code).child('members').child(auth.uid).exists()",
+          "$mid": {
+            ".write": "auth != null && $mid === auth.uid",
+            ".validate": "newData.hasChildren(['n','w','s','u']) && newData.child('n').isString() && newData.child('n').val().length <= 30 && newData.child('w').isNumber() && newData.child('w').val() >= 0 && newData.child('w').val() <= 100000 && newData.child('s').isNumber() && newData.child('s').val() >= 0 && newData.child('s').val() <= 100000 && newData.child('u').isNumber()"
+          }
+        }
+      }
+    }
+  }
+}
