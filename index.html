@@ -666,6 +666,22 @@
   #impPin { width: 100%; border: 2px solid var(--border); border-radius: 10px; padding: 10px; text-align: center; direction: ltr; letter-spacing: 4px; font-size: 1.05rem; font-family: inherit; box-sizing: border-box; outline: none; }
   #impPin:focus { border-color: var(--primary); }
   #impErr { color: var(--danger); font-size: .8rem; min-height: 1.1em; margin-top: 6px; }
+
+  /* حساب کاربری */
+  .acct-badge { font-size: .64rem; background: #f1f5f9; color: var(--muted); border-radius: 999px; padding: 2px 8px; vertical-align: middle; }
+  .acct-badge.on { background: #dcfce7; color: #166534; }
+  .acct-grid { display: grid; gap: 6px; margin-top: 6px; }
+  .acct-in { width: 100%; border: 2px solid var(--border); border-radius: 10px; padding: 9px 10px; font-family: inherit; font-size: .85rem; box-sizing: border-box; outline: none; }
+  .acct-in:focus { border-color: var(--primary); }
+  .acct-msg { font-size: .76rem; color: var(--danger); min-height: 1.1em; margin: 8px 0 0; line-height: 1.8; }
+  .acct-msg.ok { color: #166534; }
+  .acct-danger { color: #991b1b !important; }
+  #acctSignOut { background: #f1f5f9; }
+  #acctDelete { background: #fee2e2; color: #991b1b; }
+  #acctMGo { background: #dc2626; color: #fff; }
+  #acctMCancel { background: #f1f5f9; color: var(--muted); }
+  #acctMPass { width: 100%; border: 2px solid var(--border); border-radius: 10px; padding: 10px; direction: ltr; font-size: .95rem; font-family: inherit; box-sizing: border-box; outline: none; }
+  #acctMPass:focus { border-color: var(--primary); }
 </style>
 </head>
 <body>
@@ -988,6 +1004,35 @@
   </div><!-- /tabCat -->
 
   <div class="tabsec" id="tabProfile" style="display:none">
+  <div class="card" id="acctCard">
+    <h2 class="section-title">🔐 حساب من <span id="acctBadge" class="acct-badge">مهمان</span></h2>
+    <div id="acctGuestBox">
+      <p class="card-hint">با حساب واقعی، رتبه و دوست‌هات بین دستگاه‌ها هم می‌مونن. کارها، یادداشت‌ها و حال‌وهوا همچنان <b>فقط روی همین دستگاه</b> ذخیره می‌شن. مهمان هم می‌تونی بمونی.</p>
+      <div class="acct-grid">
+        <input type="email" id="acctEmail" class="acct-in" dir="ltr" maxlength="120" autocomplete="email" placeholder="ایمیل">
+        <input type="password" id="acctPass" class="acct-in" dir="ltr" maxlength="72" autocomplete="current-password" placeholder="رمز (حداقل ۶ کاراکتر)">
+        <input type="text" id="acctName" class="acct-in" maxlength="30" autocomplete="nickname" placeholder="اسم نمایشی (برای ثبت‌نام)">
+      </div>
+      <div class="footer-row" style="margin-top:8px">
+        <button type="button" class="footer-btn" id="acctSignIn">🔑 ورود</button>
+        <button type="button" class="footer-btn" id="acctSignUp">✨ ساخت حساب</button>
+      </div>
+      <div class="footer-row" style="margin-top:6px">
+        <button type="button" class="footer-btn" id="acctGoogle">ورود با گوگل</button>
+        <button type="button" class="footer-btn" id="acctReset">فراموشی رمز</button>
+      </div>
+      <p class="acct-msg" id="acctMsg"></p>
+    </div>
+    <div id="acctUserBox" style="display:none">
+      <p class="card-hint" id="acctWho"></p>
+      <div class="footer-row" style="margin-top:8px">
+        <button type="button" class="footer-btn" id="acctSignOut">🚪 خروج از این دستگاه</button>
+        <button type="button" class="footer-btn" id="acctDelete">🗑 حذف حساب</button>
+      </div>
+      <p class="card-hint">داده‌های شخصی این دستگاه با خروج پاک نمی‌شوند؛ فقط برای همین حساب بایگانی می‌شوند و با ورود دوباره برمی‌گردند. خروج از همه دستگاه‌ها نیاز به سرور دارد و در مرحلهٔ بعد اضافه می‌شود.</p>
+    </div>
+  </div>
+
   <div class="card">
     <h2 class="section-title">👤 پروفایل من</h2>
     <div id="pfAvRow"></div>
@@ -1047,6 +1092,21 @@
 
   <div class="credit">⚡ این برنامه با افتخار توسط <b>مهندس رسول شیرازی</b> طراحی و توسعه یافته است<br>💬 تلگرام: <a href="https://t.me/sHZdONI" dir="ltr" target="_blank" rel="noopener">@sHZdONI</a></div>
 </div>
+
+  <div id="acctModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="acctMTitle">
+    <div class="modal-box">
+      <h3 id="acctMTitle">تأیید حذف حساب</h3>
+      <p class="imp-note" id="acctMDesc"></p>
+      <div id="acctMPassWrap">
+        <input type="password" id="acctMPass" autocomplete="current-password" placeholder="رمز عبور حساب">
+      </div>
+      <div class="modal-actions">
+        <button type="button" id="acctMCancel">انصراف</button>
+        <button type="button" id="acctMGo">حذف نهایی</button>
+      </div>
+      <p class="acct-msg" id="acctMErr"></p>
+    </div>
+  </div>
 
   <div id="impModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="impTitle">
     <div class="modal-box">
@@ -5282,31 +5342,417 @@ function cloudInit() {
   } catch (e) { cloudSetStatus("☁️ خطا در اتصال"); return; }
   CLOUD.inited = true;
   cloudSetStatus("☁️ ورود…");
-  CLOUD.auth.signInAnonymously().catch(function (e) { cloudSetStatus("☁️ اتصال برقرار نشد"); });
   CLOUD.auth.onAuthStateChanged(function (u) {
-    if (!u) return;
-    CLOUD.uid = u.uid;
-    var ref = CLOUD.db.collection("users").doc(u.uid);
-    ref.get().then(function (d) {
-      if (d.exists) {
-        CLOUD.me = d.data();
-        // همگام‌سازی نام/آواتار محلی
-        if (state.myName && CLOUD.me.name !== state.myName) cloudPush(true);
-      } else {
-        CLOUD.me = { name: (state.myName || "کاربر").slice(0, 40), av: (state.profile && state.profile.av) || "😺", col: (state.profile && state.profile.col) || "#6366f1", invite: cloudInviteCode(u.uid), friends: [], xp: 0, day: 0, week: 0, days: {}, privacy: { share: state.privacy.share !== false }, cat: cloudCatBits(), created: Date.now() };
-        ref.set(CLOUD.me).then(function () {
-          // ثبت کد دعوت برای جستجو
-          CLOUD.db.collection("invites").doc(CLOUD.me.invite).set({ uid: u.uid }).catch(function () {});
-        }).catch(function () {});
+    if (!u) {
+      CLOUD.ok = false; CLOUD.uid = null; CLOUD.me = null;
+      if (CLOUD.pollT) { clearInterval(CLOUD.pollT); CLOUD.pollT = null; }
+      ACCOUNT.user = null;
+      renderAccount();
+      // بعد از خروج، به‌صورت مهمان (ناشناس) دوباره وصل شو تا باشگاه از کار نیفتد
+      if (!CLOUD.anonPending) {
+        CLOUD.anonPending = true;
+        setTimeout(function () {
+          CLOUD.anonPending = false;
+          if (CLOUD.auth.currentUser) return;
+          CLOUD.auth.signInAnonymously().catch(function () { cloudSetStatus("☁️ آفلاین"); });
+        }, 0);
       }
-      CLOUD.ok = true;
-      cloudSetStatus("☁️ آنلاین ✅");
-      cloudPush(true);
-      cloudLoadFriends();
-      renderCloud();
-      cloudStartPoll();
-      cloudHandleParam();
-    }).catch(function (e) { cloudSetStatus("☁️ خطا: " + (e.code || "").replace("permission-denied", "اجازه نیست")); });
+      return;
+    }
+    if (!acctOnAuth(u)) return;
+    cloudAttachUser(u);
+  });
+}
+
+// اتصال/به‌روزرسانی وضعیت ابریِ کاربر (هم از رویداد Auth، هم مستقیم بعد از ورود)
+function cloudAttachUser(u) {
+  if (!CLOUD.db || !u) return;
+  CLOUD.uid = u.uid;
+  var ref = CLOUD.db.collection("users").doc(u.uid);
+  ref.get().then(function (d) {
+    if (d.exists) {
+      CLOUD.me = d.data();
+      // همگام‌سازی نام/آواتار محلی
+      if (state.myName && CLOUD.me.name !== state.myName) cloudPush(true);
+    } else {
+      CLOUD.me = { name: (state.myName || "کاربر").slice(0, 40), av: (state.profile && state.profile.av) || "😺", col: (state.profile && state.profile.col) || "#6366f1", invite: cloudInviteCode(u.uid), friends: [], xp: 0, day: 0, week: 0, days: {}, privacy: { share: state.privacy.share !== false }, cat: cloudCatBits(), created: Date.now() };
+      ref.set(CLOUD.me).then(function () {
+        // ثبت کد دعوت برای جستجو
+        CLOUD.db.collection("invites").doc(CLOUD.me.invite).set({ uid: u.uid }).catch(function () {});
+      }).catch(function () {});
+    }
+    CLOUD.ok = true;
+    cloudSetStatus("☁️ آنلاین ✅");
+    cloudPush(true);
+    cloudLoadFriends();
+    renderCloud();
+    cloudStartPoll();
+    cloudHandleParam();
+  }).catch(function (e) { cloudSetStatus("☁️ خطا: " + (e.code || "").replace("permission-denied", "اجازه نیست")); });
+}
+
+/* ---- حساب کاربری واقعی (ایمیل/گوگل) + اتصال مهمان ---- */
+
+var ACCOUNT = { user: null, busy: false };
+
+function acctArchiveKey(uid) { return STORAGE_KEY + "::u:" + uid; }
+
+function acctArchive(uid) {
+  if (!uid || lockState.key) return;
+  try { window.localStorage.setItem(acctArchiveKey(uid), JSON.stringify(state)); } catch (e) {}
+}
+
+function acctLoadArchive(uid) {
+  try {
+    var raw = window.localStorage.getItem(acctArchiveKey(uid));
+    if (!raw || raw.indexOf(LOCK_PREFIX) === 0) return null;
+    var obj = JSON.parse(raw);
+    return (obj && typeof obj === "object") ? obj : null;
+  } catch (e) { return null; }
+}
+
+function acctClearArchive(uid) {
+  try { window.localStorage.removeItem(acctArchiveKey(uid)); } catch (e) {}
+}
+
+function acctIsEmptyish(st) {
+  return (!st.tasks || st.tasks.length === 0)
+    && (!st.history || Object.keys(st.history).length === 0)
+    && !((st.xp || 0) > 0);
+}
+
+function acctSetMsg(txt, ok) {
+  var el = $("acctMsg");
+  if (!el) return;
+  el.textContent = txt || "";
+  el.className = "acct-msg" + (ok ? " ok" : "");
+}
+
+var ACCT_BTNS = ["acctSignIn", "acctSignUp", "acctGoogle", "acctReset", "acctSignOut", "acctDelete"];
+
+function acctBusy(on) {
+  ACCOUNT.busy = !!on;
+  for (var i = 0; i < ACCT_BTNS.length; i++) {
+    var b = $(ACCT_BTNS[i]);
+    if (b) b.disabled = !!on;
+  }
+}
+
+function acctErr(e) {
+  var c = (e && e.code) || "";
+  var map = {
+    "auth/invalid-email": "ایمیل معتبر نیست ❌",
+    "auth/missing-password": "رمز را وارد کن ❌",
+    "auth/weak-password": "رمز حداقل ۶ کاراکتر باشد ❌",
+    "auth/email-already-in-use": "این ایمیل قبلاً ثبت شده — «ورود» را بزن ✅",
+    "auth/credential-already-in-use": "این ایمیل قبلاً حساب دارد — «ورود» را بزن ✅",
+    "auth/wrong-password": "ایمیل یا رمز درست نیست ❌",
+    "auth/invalid-credential": "ایمیل یا رمز درست نیست ❌",
+    "auth/user-not-found": "حسابی با این ایمیل نیست — «ساخت حساب» را بزن",
+    "auth/too-many-requests": "تلاش زیاد — چند دقیقه بعد دوباره امتحان کن ⏳",
+    "auth/network-request-failed": "اینترنت وصل نیست 🌐",
+    "auth/operation-not-allowed": "ورود ایمیلی در تنظیمات Firebase فعال نیست",
+    "auth/popup-blocked": "مرورگر پنجره ورود را بست — دوباره امتحان کن",
+    "auth/popup-closed-by-user": "پنجره ورود بسته شد",
+    "auth/cancelled-popup-request": "پنجره ورود بسته شد",
+    "auth/requires-recent-login": "برای این کار باید دوباره وارد شوی",
+    "auth/internal-error": "خطای داخلی Firebase — دوباره امتحان کن"
+  };
+  return map[c] || ("خطا: " + String(c).replace("auth/", ""));
+}
+
+function renderAccount() {
+  var badge = $("acctBadge");
+  if (!badge) return;
+  var u = ACCOUNT.user;
+  var real = !!(u && !u.anonymous);
+  if (real) {
+    badge.textContent = "وارد شده ✅";
+    badge.className = "acct-badge on";
+    $("acctGuestBox").style.display = "none";
+    $("acctUserBox").style.display = "";
+    var who = u.email || u.name || "حساب گوگل";
+    $("acctWho").textContent = "وارد شدی با " + who + (u.provider === "google.com" ? " (گوگل)" : "") + " — داده‌های شخصی این دستگاه به همین حساب بسته است.";
+  } else {
+    badge.textContent = "مهمان";
+    badge.className = "acct-badge";
+    $("acctGuestBox").style.display = "";
+    $("acctUserBox").style.display = "none";
+  }
+}
+
+// پیوند وضعیت محلی با هویت ابری؛ true یعنی ادامه بده
+function acctOnAuth(u) {
+  if (u.isAnonymous) {
+    ACCOUNT.user = { uid: u.uid, anonymous: true, email: "", name: "", provider: "" };
+    renderAccount();
+    return true;
+  }
+  var info = {
+    uid: u.uid, anonymous: false,
+    email: u.email || "",
+    name: u.displayName || "",
+    provider: (u.providerData && u.providerData[0] && u.providerData[0].providerId) || ""
+  };
+  var oldUid = state.accountUid;
+  if (oldUid === u.uid) {
+    ACCOUNT.user = info;
+    if (state.accountEmail !== (u.email || null)) { state.accountEmail = u.email || null; saveState(); }
+    renderAccount();
+    return true;
+  }
+  if (lockState.key) {
+    if (oldUid) {
+      showToast("برای تعویض حساب اول قفل رمز را بردار 🔒");
+      CLOUD.auth.signOut();
+      return false;
+    }
+    // قفل روشن و بدون حساب: فقط پیوند بزن؛ بایگانیِ متن‌رو نمی‌نویسیم
+    state.accountUid = u.uid;
+    state.accountEmail = u.email || null;
+    saveState();
+    ACCOUNT.user = info;
+    renderAccount();
+    showToast("حساب به این دستگاه وصل شد 🔐");
+    return true;
+  }
+  if (oldUid && oldUid !== u.uid) {
+    acctArchive(oldUid);
+  }
+  var archived = acctLoadArchive(u.uid);
+  if (archived) {
+    if (!acctIsEmptyish(state)) {
+      try { window.localStorage.setItem(STORAGE_KEY + "::rescue:" + Date.now(), JSON.stringify(state)); } catch (e) {}
+    }
+    state = sanitize(archived);
+    showToast("داده‌های قبلی این حساب روی این دستگاه بازگردانی شد ♻️");
+  } else if (oldUid && oldUid !== u.uid) {
+    state = sanitize({});
+    showToast("داده‌های حساب قبلی بایگانی شد — با ورود به آن حساب برمی‌گردد 💾");
+  }
+  state.accountUid = u.uid;
+  state.accountEmail = u.email || null;
+  ensureCat();
+  ensureProfile();
+  ensureMissions();
+  saveState();
+  acctArchive(u.uid);
+  ACCOUNT.user = info;
+  renderAll();
+  renderProfile();
+  renderAccount();
+  return true;
+}
+
+// پس از بازیابی پشتیبان، بستن داده به حسابِ فعلی
+function acctAfterLocalReplace() {
+  var u = CLOUD.auth && CLOUD.auth.currentUser;
+  var real = !!(u && !u.isAnonymous);
+  state.accountUid = real ? u.uid : null;
+  state.accountEmail = real ? (u.email || null) : null;
+  if (real) acctArchive(u.uid);
+}
+
+function acctCred(email, pass) {
+  return firebase.auth.EmailAuthProvider.credential(email, pass);
+}
+
+function acctEmailAuth(mode) {
+  if (!CLOUD.auth) { acctSetMsg("اتصال ابری برقرار نیست — اینترنت را بررسی کن 🌐"); return; }
+  if (ACCOUNT.busy) return;
+  var email = ($("acctEmail").value || "").trim();
+  var pass = $("acctPass").value || "";
+  var name = ($("acctName").value || "").trim().slice(0, 30);
+  acctSetMsg("");
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { acctSetMsg("ایمیل معتبر بنویس ❌"); return; }
+  if (pass.length < 6) { acctSetMsg("رمز حداقل ۶ کاراکتر باشد ❌"); return; }
+  acctBusy(true);
+  acctSetMsg(mode === "up" ? "در حال ساخت حساب…" : "در حال ورود…", true);
+  var cur = CLOUD.auth.currentUser;
+  var p;
+  if (mode === "up") {
+    if (name) state.myName = name;
+    if (cur && cur.isAnonymous) p = cur.linkWithCredential(acctCred(email, pass));
+    else p = CLOUD.auth.createUserWithEmailAndPassword(email, pass);
+  } else {
+    p = CLOUD.auth.signInWithEmailAndPassword(email, pass);
+  }
+  p.then(function (cred) {
+    var user = cred.user || CLOUD.auth.currentUser;
+    if (mode === "up" && name && user && user.updateProfile) return user.updateProfile({ displayName: name }).then(function () { return user; });
+    return user;
+  }).then(function (user) {
+    // رویداد Auth ممکن است دیر برسد؛ اتصال را همین‌جا قطعی کن
+    if (user) {
+      if (!acctOnAuth(user)) { acctBusy(false); acctSetMsg("تعویض حساب انجام نشد — اول قفل رمز را بردار 🔒"); return; }
+      cloudAttachUser(user);
+    }
+    acctBusy(false);
+    acctSetMsg(mode === "up" ? "حساب ساخته شد ✅" : "خوش برگشتی ✅", true);
+    $("acctPass").value = "";
+    showToast(mode === "up" ? "حساب ساخته شد 🎉" : "وارد شدی 👋");
+  }).catch(function (e) {
+    acctBusy(false);
+    acctSetMsg(acctErr(e));
+  });
+}
+
+function acctGoogleAuth() {
+  if (!CLOUD.auth) { acctSetMsg("اتصال ابری برقرار نیست — اینترنت را بررسی کن 🌐"); return; }
+  if (ACCOUNT.busy) return;
+  var provider = new firebase.auth.GoogleAuthProvider();
+  var cur = CLOUD.auth.currentUser;
+  acctSetMsg("در حال باز کردن پنجره گوگل…", true);
+  acctBusy(true);
+  var p;
+  if (cur && cur.isAnonymous) {
+    p = cur.linkWithPopup(provider).catch(function (e) {
+      if (e && (e.code === "auth/credential-already-in-use" || e.code === "auth/email-already-in-use")) {
+        return CLOUD.auth.signInWithPopup(provider);
+      }
+      throw e;
+    });
+  } else {
+    p = CLOUD.auth.signInWithPopup(provider);
+  }
+  p.then(function (cred) {
+    var user = (cred && cred.user) || CLOUD.auth.currentUser;
+    if (user) {
+      if (!acctOnAuth(user)) { acctBusy(false); acctSetMsg("تعویض حساب انجام نشد — اول قفل رمز را بردار 🔒"); return; }
+      cloudAttachUser(user);
+    }
+    acctBusy(false);
+    acctSetMsg("وارد شدی ✅", true);
+    showToast("ورود با گوگل انجام شد 👋");
+  }).catch(function (e) {
+    acctBusy(false);
+    acctSetMsg(acctErr(e));
+  });
+}
+
+function acctResetPass() {
+  if (!CLOUD.auth) { acctSetMsg("اتصال ابری برقرار نیست 🌐"); return; }
+  var email = ($("acctEmail").value || "").trim();
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { acctSetMsg("ایمیل حسابت را در کادر بالا بنویس ❌"); return; }
+  if (ACCOUNT.busy) return;
+  acctBusy(true);
+  CLOUD.auth.sendPasswordResetEmail(email).then(function () {
+    acctBusy(false);
+    acctSetMsg("لینک بازیابی به ایمیل فرستاده شد 📧 (پوشه اسپم را هم ببین)", true);
+  }).catch(function (e) {
+    acctBusy(false);
+    acctSetMsg(acctErr(e));
+  });
+}
+
+function acctSignOut() {
+  var u = CLOUD.auth && CLOUD.auth.currentUser;
+  if (!u || u.isAnonymous) { showToast("الان مهمانی — حساب واقعی وارد نشده"); return; }
+  if (lockState.key) { showToast("برای خروج از حساب اول قفل رمز را بردار 🔒"); return; }
+  if (!window.confirm("از حساب خارج بشی؟\nداده‌های شخصی این دستگاه برای حسابت بایگانی می‌شود و با ورود دوباره برمی‌گردد. برای اطمینان پشتیبان بگیر.")) return;
+  var uid = state.accountUid || u.uid;
+  acctArchive(uid);
+  CLOUD.ok = false; CLOUD.uid = null; CLOUD.me = null;
+  if (CLOUD.pollT) { clearInterval(CLOUD.pollT); CLOUD.pollT = null; }
+  clearTimeout(CLOUD.pushT);
+  state = sanitize({});
+  saveState();
+  ACCOUNT.user = null;
+  renderAll();
+  renderProfile();
+  renderAccount();
+  renderCloud();
+  cloudSetStatus("☁️ مهمان");
+  CLOUD.auth.signOut().catch(function () { showToast("خروج ناموفق بود — اینترنت را بررسی کن ❌"); });
+  showToast("خارج شدی — داده‌ها بایگانی شد و با ورود دوباره برمی‌گردد 👋");
+}
+
+function acctOpenDelete() {
+  var u = CLOUD.auth && CLOUD.auth.currentUser;
+  if (!u || u.isAnonymous) { showToast("الان مهمانی — حساب واقعی وارد نشده"); return; }
+  if (lockState.key) { showToast("برای حذف حساب اول قفل رمز را بردار 🔒"); return; }
+  if (!window.confirm("حذف حساب برگشت‌ناپذیر است:\n• حساب ورود و داده‌های ابری (امتیاز، دوستان، کد دعوت، پست‌های فید) پاک می‌شوند.\n• داده‌های شخصی این دستگاه هم پاک می‌شوند.\n\nاگر این کار را نمی‌خواهی، انصراف بده.")) return;
+  var isPass = false;
+  var pd = u.providerData || [];
+  for (var i = 0; i < pd.length; i++) if (pd[i].providerId === "password") isPass = true;
+  $("acctMDesc").textContent = isPass
+    ? "برای تأیید، رمز عبور حسابت را وارد کن. سپس همه‌ی داده‌های ابری و همین دستگاه پاک می‌شود."
+    : "برای تأیید، دوباره با گوگل وارد شو. سپس همه‌ی داده‌های ابری و همین دستگاه پاک می‌شود.";
+  $("acctMPassWrap").style.display = isPass ? "" : "none";
+  $("acctMPass").value = "";
+  $("acctMErr").textContent = "";
+  $("acctMGo").disabled = false;
+  $("acctMCancel").disabled = false;
+  $("acctModal").style.display = "flex";
+  if (isPass) setTimeout(function () { $("acctMPass").focus(); }, 60);
+}
+
+function acctCloseDelete() {
+  $("acctModal").style.display = "none";
+  $("acctMPass").value = "";
+  $("acctMErr").textContent = "";
+  $("acctMGo").disabled = false;
+  $("acctMCancel").disabled = false;
+}
+
+function acctWipeCloud(u, invite) {
+  CLOUD.ok = false; CLOUD.me = null;
+  if (CLOUD.pollT) { clearInterval(CLOUD.pollT); CLOUD.pollT = null; }
+  clearTimeout(CLOUD.pushT);
+  var db = CLOUD.db;
+  var jobs = [];
+  jobs.push(db.collection("users").doc(u.uid).delete());
+  if (invite) jobs.push(db.collection("invites").doc(invite).delete());
+  jobs.push(db.collection("feed").where("uid", "==", u.uid).limit(100).get().then(function (qs) {
+    return Promise.all(qs.docs.map(function (d) { return d.ref.delete(); }));
+  }));
+  return Promise.all(jobs);
+}
+
+function acctDeleteRun() {
+  var u = CLOUD.auth && CLOUD.auth.currentUser;
+  if (!u || u.isAnonymous) { acctCloseDelete(); return; }
+  var pass = $("acctMPass").value || "";
+  var isPass = false;
+  var pd = u.providerData || [];
+  for (var i = 0; i < pd.length; i++) if (pd[i].providerId === "password") isPass = true;
+  if (isPass && !pass) { $("acctMErr").textContent = "رمز عبور را وارد کن ❌"; return; }
+  $("acctMErr").textContent = "در حال حذف…";
+  $("acctMGo").disabled = true;
+  $("acctMCancel").disabled = true;
+  var email = u.email || "";
+  var invite = (CLOUD.me && CLOUD.me.invite) || null;
+  var uid = u.uid;
+  acctWipeCloud(u, invite).catch(function () {
+    // اگر حذف یکی از داده‌ها نشد، ادامه نده تا حساب نیمه‌حذف نشود
+    throw { code: "wipe/failed" };
+  }).then(function () {
+    return u.delete();
+  }).catch(function (e) {
+    if (e && e.code === "auth/requires-recent-login") {
+      var re;
+      if (isPass) re = u.reauthenticateWithCredential(acctCred(email, pass));
+      else re = u.reauthenticateWithPopup(new firebase.auth.GoogleAuthProvider());
+      return re.then(function (cred) { return (cred.user || u).delete(); });
+    }
+    throw e;
+  }).then(function () {
+    acctClearArchive(uid);
+    state = sanitize({});
+    saveState();
+    ACCOUNT.user = null;
+    acctCloseDelete();
+    renderAll();
+    renderProfile();
+    renderAccount();
+    renderCloud();
+    showToast("حساب و داده‌های ابری حذف شد ✅");
+  }).catch(function (e) {
+    $("acctMGo").disabled = false;
+    $("acctMCancel").disabled = false;
+    $("acctMErr").textContent = (e && e.code === "wipe/failed")
+      ? "حذف داده‌های ابری انجام نشد — اینترنت/دسترسی را بررسی کن و دوباره امتحان کن ❌"
+      : acctErr(e);
   });
 }
 
@@ -5356,6 +5802,9 @@ function cloudPush(force) {
   var day = cloudDayScore();
   var week = cloudWeekScore();
   var dayPrev = (CLOUD.me.days && CLOUD.me.days[today]) || 0;
+  // امتیاز ابری با دستگاه خالی/بازیابی عقب برنمی‌گردد
+  if (day < dayPrev) day = dayPrev;
+  if (week < (CLOUD.me.week || 0)) week = CLOUD.me.week || 0;
   // سقف‌های Rules: delta روزانه هر push نباید زیاد باشد
   if (day - dayPrev > 60) day = dayPrev + 60;
   var patch = {
@@ -5724,7 +6173,7 @@ function renderCloud() {
 
 var BACKUP_APP = "karhaye-roozane";
 var BACKUP_VER = 2;
-var APP_VER = "3.1";
+var APP_VER = "3.2";
 var pendingImport = null;
 var importTries = 0;
 
@@ -5967,6 +6416,7 @@ function mergeImport() {
   if (!state.lastBackupAt || (inc.lastBackupAt && inc.lastBackupAt > state.lastBackupAt)) state.lastBackupAt = inc.lastBackupAt || state.lastBackupAt;
   if (!state.tz && inc.tz) state.tz = inc.tz;
   state = sanitize(state);
+  acctAfterLocalReplace();
   snapshotDay();
   saveState();
   renderAll();
@@ -5981,6 +6431,7 @@ function replaceImport() {
   if (!window.confirm("همه‌ی داده‌های فعلی این دستگاه با فایل پشتیبان جایگزین شود؟ این کار برگشت‌پذیر نیست.")) return;
   state = sanitize(pendingImport.incoming);
   if (!state.tz) state.tz = browserTz();
+  acctAfterLocalReplace();
   ensureCat(); ensureProfile(); ensureMissions();
   snapshotDay();
   saveState();
@@ -6291,6 +6742,8 @@ function sanitize(s) {
   clean.v = 2;
   clean.tz = (typeof s.tz === "string" && /^[A-Za-z0-9_\/+.-]{2,48}$/.test(s.tz)) ? s.tz : null;
   clean.lastBackupAt = (typeof s.lastBackupAt === "number" && s.lastBackupAt > 1000000000000 && s.lastBackupAt < 4102444800000) ? Math.round(s.lastBackupAt) : null;
+  clean.accountUid = (typeof s.accountUid === "string" && /^[A-Za-z0-9_-]{8,128}$/.test(s.accountUid)) ? s.accountUid : null;
+  clean.accountEmail = (typeof s.accountEmail === "string" && s.accountEmail.length <= 120 && /^[^@\s]+@[^@\s]+$/.test(s.accountEmail)) ? s.accountEmail : null;
   clean.pomoRun = null;
   if (s.pomoRun && typeof s.pomoRun === "object") {
     var prMode = (s.pomoRun.mode === "break") ? "break" : "work";
@@ -6688,6 +7141,24 @@ if (bootEncrypted) {
     cloudPush(true);
     showToast($("privShare").checked ? "امتیازهات در باشگاه دیده می‌شه ✅" : "امتیازهات از باشگاه مخفی شد 🕶️");
   });
+  if ($("acctSignIn")) $("acctSignIn").addEventListener("click", function () { acctEmailAuth("in"); });
+  if ($("acctSignUp")) $("acctSignUp").addEventListener("click", function () { acctEmailAuth("up"); });
+  if ($("acctGoogle")) $("acctGoogle").addEventListener("click", acctGoogleAuth);
+  if ($("acctReset")) $("acctReset").addEventListener("click", acctResetPass);
+  if ($("acctSignOut")) $("acctSignOut").addEventListener("click", acctSignOut);
+  if ($("acctDelete")) $("acctDelete").addEventListener("click", acctOpenDelete);
+  if ($("acctPass")) $("acctPass").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); acctEmailAuth("in"); }
+  });
+  if ($("acctMCancel")) $("acctMCancel").addEventListener("click", acctCloseDelete);
+  if ($("acctMGo")) $("acctMGo").addEventListener("click", acctDeleteRun);
+  if ($("acctMPass")) $("acctMPass").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); acctDeleteRun(); }
+  });
+  if ($("acctModal")) $("acctModal").addEventListener("click", function (e) {
+    if (e.target === $("acctModal")) acctCloseDelete();
+  });
+  renderAccount();
   // ☁️ دکمه‌های ابری
   if ($("cloudAddFriend")) $("cloudAddFriend").addEventListener("click", cloudAddFriendByCode);
   if ($("cloudCodeIn")) $("cloudCodeIn").addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); cloudAddFriendByCode(); } });
