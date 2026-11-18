@@ -1,4 +1,4 @@
-var CACHE = "karhaye-roozane-v6";
+var CACHE = "karhaye-roozane-v7";
 var CORE = ["./", "./index.html", "./manifest.webmanifest", "./icon.svg", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png", "./favicon-32.png"];
 var ART = [];
 for (var i = 1; i <= 10; i++) ART.push("./cat-stage-" + (i < 10 ? "0" + i : i) + ".webp");

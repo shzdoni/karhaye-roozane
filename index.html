@@ -967,6 +967,7 @@
     <h2 class="section-title" style="margin-top:14px">💬 فید دوستان</h2>
     <div id="cloudFeed"></div>
     <div id="cloudBlocked" style="margin-top:10px"></div>
+    <div id="cloudSync" style="margin-top:12px"></div>
   </div>
 
   <div class="card">
@@ -1429,6 +1430,8 @@ document.addEventListener("visibilitychange", function () {
   // برگشت از پس‌زمینه/قفل گوشی: پومودورو و یادآورها فوراً با زمان واقعی هماهنگ شوند
   try { if (pomo && pomo.running) pomoTick(); } catch (e) {}
   try { if (typeof checkReminders === "function") checkReminders(); } catch (e) {}
+  // پس از بازگشت، اتصال ابری و همگام‌سازی تازه شود
+  try { if (typeof CLOUD === "object" && CLOUD && CLOUD.ok) { cloudPush(true); if (typeof syncCheck === "function") syncCheck(false); } } catch (e) {}
 });
 // همگام‌سازی بین تب‌ها: تغییر در تب دیگر، این تب را هم تازه می‌کند
 window.addEventListener("storage", function (e) {
@@ -5467,6 +5470,7 @@ function cloudAttachUser(u) {
     renderCloud();
     cloudStartPoll();
     cloudHandleParam();
+    if (typeof syncBoot === "function") syncBoot();
   }).catch(function (e) { cloudSetStatus("☁️ خطا: " + (e.code || "").replace("permission-denied", "اجازه نیست")); });
 }
 
@@ -5816,6 +5820,7 @@ function acctWipeCloud(u, invite) {
   jobs.push(safe(db.collection("publicProfiles").doc(u.uid).delete()));
   jobs.push(safe(db.collection("friendships").doc(u.uid).delete()));
   jobs.push(safe(db.collection("backups").doc(u.uid).delete()));
+  jobs.push(safe(db.collection("sync").doc(u.uid).delete()));
   if (invite) jobs.push(safe(db.collection("invites").doc(invite).delete()));
   // پست‌های فید جدید (صفحه‌بندی‌شده، بدون سقف ۱۰۰)
   jobs.push(safe(acctDeleteQuery(db.collection("feed").doc(u.uid).collection("posts"), 50), "posts"));
@@ -5869,6 +5874,12 @@ function acctDeleteRun() {
     throw e;
   }).then(function () {
     acctClearArchive(uid);
+    if (typeof syncDisable === "function") {
+      // کلید و تنظیمات همگام‌سازی این دستگاه هم پاک شود
+      try { window.localStorage.removeItem(SYNC_CFG_KEY); window.localStorage.removeItem(SYNC_PRE_KEY); } catch (e) {}
+      clearInterval(SYNC.pollT); SYNC.pollT = null;
+      syncKeyDel(); SYNC.key = null; SYNC.cfg = null;
+    }
     state = sanitize({});
     saveState();
     ACCOUNT.user = null;
@@ -5927,7 +5938,12 @@ function cloudMonthScore() {
   return s;
 }
 
-function cloudPushSoon() { if (!CLOUD.ok) return; clearTimeout(CLOUD.pushT); CLOUD.pushT = setTimeout(function () { cloudPush(false); }, 2500); }
+function cloudPushSoon() {
+  if (!CLOUD.ok) return;
+  clearTimeout(CLOUD.pushT);
+  CLOUD.pushT = setTimeout(function () { cloudPush(false); }, 2500);
+  if (typeof syncSoon === "function") syncSoon();
+}
 
 function myPrivacy() {
   var p = (state && state.privacy) || {};
@@ -5953,6 +5969,8 @@ function cloudEnsureFriendLinks() {
 
 function cloudPush(force) {
   if (!CLOUD.ok || !CLOUD.me) return;
+  // بدون force، پس‌زمینه/تب مخفی هیچ نوشتنی انجام نده
+  if (!force && document.visibilityState === "hidden") return;
   var today = todayKey();
   var day = cloudDayScore();
   var week = cloudWeekScore();
@@ -5963,6 +5981,13 @@ function cloudPush(force) {
   if (week < (CLOUD.me.week || 0)) week = CLOUD.me.week || 0;
   // سقف‌های Rules: delta روزانه هر push نباید زیاد باشد
   if (day - dayPrev > 60) day = dayPrev + 60;
+  // وضعیت آنلاین فقط وقتی کاربر اجازه داده و حداکثر هر ۲ دقیقه‌ یک‌بار نوشته می‌شود
+  var seenVal = 0;
+  if (pv.online) {
+    var nowMs = Date.now();
+    if (!CLOUD.seenAt || nowMs - CLOUD.seenAt > 120000) { CLOUD.seenAt = nowMs; seenVal = nowMs; }
+    else seenVal = CLOUD.me.seen || 0;
+  }
   var patch = {
     name: (state.myName || "کاربر").slice(0, 40),
     av: (state.profile && state.profile.av) || "😺",
@@ -5972,7 +5997,7 @@ function cloudPush(force) {
     week: Math.min(week, (CLOUD.me.week || 0) + 60),
     privacy: pv,
     cat: cloudCatBits(),
-    seen: pv.online ? Date.now() : 0
+    seen: seenVal
   };
   patch.days = {};
   patch.days[today] = day;
@@ -5985,7 +6010,17 @@ function cloudPush(force) {
   var pushKey = JSON.stringify([patch, pv]);
   if (!force && CLOUD.lastPush === pushKey) { renderCloudStats(); return; }
   CLOUD.lastPush = pushKey;
-  CLOUD.db.collection("users").doc(CLOUD.uid).set(patch, { merge: true }).catch(function () {});
+  var uRef = CLOUD.db.collection("users").doc(CLOUD.uid);
+  var writePatch = patch;
+  if (CLOUD.noXpWrite) { writePatch = {}; for (var pk in patch) if (pk !== "xp") writePatch[pk] = patch[pk]; }
+  uRef.set(writePatch, { merge: true }).catch(function () {
+    // اگر قوانین مرحله‌۲ (XP فقط سرور) فعال باشد، بدون xp دوباره می‌نویسیم
+    if (CLOUD.noXpWrite) return;
+    CLOUD.noXpWrite = true;
+    var p2 = {};
+    for (var k2 in patch) if (k2 !== "xp") p2[k2] = patch[k2];
+    uRef.set(p2, { merge: true }).catch(function () {});
+  });
   // نسخه‌ی عمومی و کم‌داده؛ هر فیلد فقط با اجازه‌ی جداگانه‌ی کاربر منتشر می‌شود
   var pubRef = CLOUD.db.collection("publicProfiles").doc(CLOUD.uid);
   if (!pv.share) {
@@ -6148,7 +6183,7 @@ function cloudCopyMyCode() {
 function cloudCreateChallenge() {
   if (!CLOUD.ok) { showToast("اول منتظر اتصال ابری بمون ☁️"); return; }
   var id = "c" + Date.now().toString(36) + Math.floor(Math.random() * 1296).toString(36);
-  var room = { h: CLOUD.uid, hn: (state.myName || "کاربر").slice(0, 40), hav: (state.profile && state.profile.av) || "😺", g: null, gnn: "", gav: "", type: "day", t: Date.now(), s: {} };
+  var room = { h: CLOUD.uid, hn: (state.myName || "کاربر").slice(0, 40), hav: (state.profile && state.profile.av) || "😺", g: null, gnn: "", gav: "", type: "day", t: Date.now(), exp: Date.now() + 7 * 86400000, s: {} };
   room.s[CLOUD.uid] = cloudDayScore();
   CLOUD.db.collection("rooms").doc(id).set(room).then(function () {
     CLOUD.rooms[id] = room;
@@ -6163,19 +6198,39 @@ function cloudCreateChallenge() {
 function cloudJoinChallenge(id) {
   if (!CLOUD.ok) return;
   var roomRef = CLOUD.db.collection("rooms").doc(id);
-  function enter(r) { CLOUD.rooms[id] = r; renderCloud(); }
+  function enter(r) {
+    if (r && typeof r.exp === "number" && r.exp < Date.now()) { showToast("این چالش منقضی شده — از میزبان لینک تازه بگیر ⌛"); return false; }
+    CLOUD.rooms[id] = r; renderCloud(); return true;
+  }
   // اگر عضو باشم، خواندن آزاد است؛ اگر نه، Rules خواندن را می‌بندد
   roomRef.get().then(function (d) {
-    if (d.exists) { enter(d.data()); showToast("تو عضو این چالش هستی ⚔️"); }
+    if (d.exists) {
+      if (enter(d.data())) showToast("تو عضو این چالش هستی ⚔️");
+    }
   }).catch(function () {
     // Rules خواندن اتاق را فقط برای اعضا می‌دهد؛ پس با یک update اتمی عضو می‌شوم
     roomRef.update({ g: CLOUD.uid, gnn: (state.myName || "کاربر").slice(0, 40), gav: (state.profile && state.profile.av) || "😺" }).then(function () {
       return roomRef.get();
     }).then(function (d) {
-      if (d.exists) { showToast("به چالش پیوستی! ⚔️"); enter(d.data()); }
+      if (d.exists) { if (enter(d.data())) showToast("به چالش پیوستی! ⚔️"); }
       else showToast("چالش پیدا نشد ❌");
-    }).catch(function () { showToast("ورود به چالش ناموفق بود — لینک را از میزبان تازه بگیر ❌"); });
+    }).catch(function () { showToast("ورود به چالش ناموفق بود — ممکن است منقضی شده باشد؛ لینک تازه بگیر ❌"); });
   });
+}
+
+function cloudLeaveChallenge(id) {
+  if (!CLOUD.ok || !CLOUD.uid) return;
+  var r = CLOUD.rooms[id];
+  if (!r) return;
+  var isHost = r.h === CLOUD.uid;
+  if (!window.confirm(isHost ? "اتاق چالش برای همیشه حذف شود؟" : "از این چالش خارج بشی؟")) return;
+  var roomRef = CLOUD.db.collection("rooms").doc(id);
+  var p = isHost ? roomRef.delete() : roomRef.update({ g: null, gnn: "", gav: "" });
+  p.then(function () {
+    delete CLOUD.rooms[id];
+    renderCloud();
+    showToast(isHost ? "اتاق حذف شد 🗑" : "از چالش خارج شدی 👋");
+  }).catch(function () { showToast("عملیات ناموفق بود — اینترنت را بررسی کن ❌"); });
 }
 
 function cloudHandleParam() {
@@ -6191,6 +6246,8 @@ function cloudStartPoll() {
   clearInterval(CLOUD.pollT);
   CLOUD.pollT = setInterval(function () {
     if (!CLOUD.ok || !CLOUD.me) return;
+    // تب مخفی = بدون درخواست شبکه (باتری/سهمیه)
+    if (document.visibilityState === "hidden") return;
     cloudPush(false);
     // به‌روزرسانی اتاق‌های فعال
     for (var id in CLOUD.rooms) {
@@ -6394,11 +6451,23 @@ function renderCloudRooms() {
   if (!CLOUD.ok) return;
   for (var id in CLOUD.rooms) {
     var r = CLOUD.rooms[id];
+    // اتاق منقضی: میزبان حذفش می‌کند، مهمان دیگر نمی‌بیندش
+    if (r && typeof r.exp === "number" && r.exp < Date.now()) {
+      if (r.h === CLOUD.uid) CLOUD.db.collection("rooms").doc(id).delete().catch(function () {});
+      delete CLOUD.rooms[id];
+      continue;
+    }
     var card = document.createElement("div");
     card.className = "room-card";
     var t = document.createElement("div");
     t.className = "room-title";
     t.textContent = "⚔️ رقابت دونفره — امتیاز امروز";
+    if (r && typeof r.exp === "number") {
+      var left = document.createElement("span");
+      left.style.cssText = "font-size:.7rem;color:var(--muted);margin-right:6px";
+      left.textContent = "⌛ " + toFa(Math.max(1, Math.ceil((r.exp - Date.now()) / 86400000))) + " روز";
+      t.appendChild(left);
+    }
     card.appendChild(t);
     var vs = document.createElement("div");
     vs.className = "room-vs";
@@ -6448,6 +6517,16 @@ function renderCloudRooms() {
         p2["s." + CLOUD.uid] = cur;
         CLOUD.db.collection("rooms").doc(id).update(p2).catch(function () {});
       }
+      var actRow = document.createElement("div");
+      actRow.style.cssText = "margin-top:8px;text-align:left";
+      var leaveBtn = document.createElement("button");
+      leaveBtn.type = "button"; leaveBtn.className = "mis-btn";
+      leaveBtn.textContent = r.h === CLOUD.uid ? "🗑 حذف اتاق" : "🚪 خروج از چالش";
+      (function (rid) {
+        leaveBtn.addEventListener("click", function () { cloudLeaveChallenge(rid); });
+      })(id);
+      actRow.appendChild(leaveBtn);
+      card.appendChild(actRow);
     }
     box.appendChild(card);
   }
@@ -6559,6 +6638,7 @@ function renderCloud() {
   renderCloudRooms();
   renderCloudFeed();
   renderCloudBlocked();
+  if (typeof syncRender === "function") syncRender();
 }
 
 /* ==================# پشتیبان‌گیری #================== */
@@ -6567,7 +6647,7 @@ function renderCloud() {
 
 var BACKUP_APP = "karhaye-roozane";
 var BACKUP_VER = 2;
-var APP_VER = "3.4.4";
+var APP_VER = "3.5.0";
 var pendingImport = null;
 var importTries = 0;
 
@@ -6682,6 +6762,306 @@ function cloudBackupDown() {
   }).catch(function () {
     showToast("دریافت پشتیبان ابری ناموفق بود ❌");
   });
+}
+
+/* ==================# همگام‌سازی رمزدار چنددستگاهی (آزمایشی) #================== */
+var SYNC_CFG_KEY = "dailyTasksSync_v1";
+var SYNC_PRE_KEY = "dailyTasksPreSync_v1";
+var SYNC = { cfg: null, key: null, busy: false, pushT: null, pollT: null, conflict: null, note: "" };
+
+function syncHash(s) {
+  var h = 2166136261;
+  for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = (h * 16777619) >>> 0; }
+  return h.toString(36) + ":" + s.length.toString(36);
+}
+
+function syncLoadCfg() {
+  try { SYNC.cfg = JSON.parse(window.localStorage.getItem(SYNC_CFG_KEY) || "null"); } catch (e) { SYNC.cfg = null; }
+  if (SYNC.cfg && typeof SYNC.cfg !== "object") SYNC.cfg = null;
+  return SYNC.cfg;
+}
+function syncSaveCfg() {
+  try {
+    if (SYNC.cfg) window.localStorage.setItem(SYNC_CFG_KEY, JSON.stringify(SYNC.cfg));
+    else window.localStorage.removeItem(SYNC_CFG_KEY);
+  } catch (e) {}
+}
+
+var syncDbP = null;
+function syncDb() {
+  if (syncDbP) return syncDbP;
+  syncDbP = new Promise(function (res, rej) {
+    if (!window.indexedDB) { rej(new Error("noidb")); return; }
+    var rq = indexedDB.open("krsync", 1);
+    rq.onupgradeneeded = function () { if (!rq.result.objectStoreNames.contains("keys")) rq.result.createObjectStore("keys"); };
+    rq.onsuccess = function () { res(rq.result); };
+    rq.onerror = function () { rej(rq.error); };
+  });
+  return syncDbP;
+}
+function syncIdb(mode, fn) {
+  return syncDb().then(function (db) {
+    return new Promise(function (res, rej) {
+      var tx = db.transaction("keys", mode);
+      var rq = fn(tx.objectStore("keys"));
+      tx.oncomplete = function () { res(rq ? rq.result : undefined); };
+      tx.onerror = function () { rej(tx.error); };
+    });
+  });
+}
+function syncKeyGet() { return syncIdb("readonly", function (st) { return st.get("k"); }); }
+function syncKeyPut(k) { return syncIdb("readwrite", function (st) { return st.put(k, "k"); }); }
+function syncKeyDel() { return syncIdb("readwrite", function (st) { return st.delete("k"); }).catch(function () {}); }
+
+function syncEnsureKey() {
+  if (SYNC.key) return Promise.resolve(SYNC.key);
+  return syncKeyGet().then(function (k) {
+    if (!k) throw new Error("nokey");
+    SYNC.key = k;
+    return k;
+  });
+}
+
+function syncRender(note) {
+  var box = $("cloudSync");
+  if (!box) return;
+  if (note) SYNC.note = note;
+  box.textContent = "";
+  var head = document.createElement("h2");
+  head.className = "section-title";
+  head.textContent = "🔄 همگام‌سازی رمزدار دستگاه‌ها (آزمایشی)";
+  box.appendChild(head);
+  var hint = document.createElement("p");
+  hint.className = "card-hint";
+  hint.textContent = "کارها، تنظیمات، یادداشت و وضعیت گربه با رمز خودت رمز می‌شوند؛ فقط متن رمزشده در ابر می‌ماند و کلید فقط روی همین دستگاه ذخیره می‌شود.";
+  box.appendChild(hint);
+  var u = CLOUD.auth && CLOUD.auth.currentUser;
+  if (!CLOUD.ok || !u || u.isAnonymous) {
+    var p = document.createElement("p"); p.className = "card-hint";
+    p.textContent = "برای همگام‌سازی بین دو دستگاه اول با ایمیل یا گوگل وارد حساب شو 🔐";
+    box.appendChild(p);
+    return;
+  }
+  if (!window.crypto || !crypto.subtle || !window.indexedDB) {
+    var p2 = document.createElement("p"); p2.className = "card-hint";
+    p2.textContent = "این مرورگر از همگام‌سازی رمزدار پشتیبانی نمی‌کند ❌";
+    box.appendChild(p2);
+    return;
+  }
+  var row = document.createElement("div");
+  row.className = "cloud-row";
+  row.style.marginTop = "6px";
+  if (!SYNC.cfg || !SYNC.cfg.on) {
+    var b = document.createElement("button");
+    b.type = "button"; b.className = "footer-btn"; b.textContent = "🔐 روشن کردن همگام‌سازی";
+    b.addEventListener("click", syncEnable);
+    row.appendChild(b);
+    box.appendChild(row);
+    return;
+  }
+  var st = document.createElement("p");
+  st.className = "card-hint";
+  st.style.margin = "0 0 6px";
+  st.textContent = "نسخه ابری: " + toFa(SYNC.cfg.lastRev || 0) + " • " + (SYNC.note || "آماده");
+  box.appendChild(st);
+  var b1 = document.createElement("button");
+  b1.type = "button"; b1.className = "footer-btn"; b1.textContent = "⤴️ ارسال الان";
+  b1.addEventListener("click", function () { syncPush(true); });
+  var b2 = document.createElement("button");
+  b2.type = "button"; b2.className = "footer-btn"; b2.textContent = "⬇️ دریافت";
+  b2.addEventListener("click", function () { syncCheck(true); });
+  var b3 = document.createElement("button");
+  b3.type = "button"; b3.className = "footer-btn"; b3.textContent = "⛔ خاموش";
+  b3.addEventListener("click", syncDisable);
+  row.appendChild(b1); row.appendChild(b2); row.appendChild(b3);
+  box.appendChild(row);
+  if (SYNC.conflict) {
+    var warn = document.createElement("p");
+    warn.className = "card-hint";
+    warn.style.color = "#f59e0b";
+    warn.textContent = "⚠️ دستگاه دیگری نسخه جدیدتری فرستاده. یکی را انتخاب کن:";
+    box.appendChild(warn);
+    var row2 = document.createElement("div");
+    row2.className = "cloud-row";
+    var c1 = document.createElement("button");
+    c1.type = "button"; c1.className = "footer-btn"; c1.textContent = "⬇️ اعمال نسخه ابری";
+    c1.addEventListener("click", syncResolveCloud);
+    var c2 = document.createElement("button");
+    c2.type = "button"; c2.className = "footer-btn"; c2.textContent = "⤴️ ارسال نسخه من";
+    c2.addEventListener("click", function () { syncPush(true); });
+    row2.appendChild(c1); row2.appendChild(c2);
+    box.appendChild(row2);
+  }
+}
+
+function syncEnable() {
+  var u = CLOUD.auth && CLOUD.auth.currentUser;
+  if (!CLOUD.ok || !u || u.isAnonymous) { showToast("برای همگام‌سازی اول با ایمیل/گوگل وارد شو 🔐"); return; }
+  if (lockState.key) { showToast("اول قفل رمز را بردار 🔒"); return; }
+  var pin = window.prompt("رمز همگام‌سازی (حداقل ۶ کاراکتر) — همین رمز را روی دستگاه دوم هم لازم داری:", "");
+  if (pin === null) return;
+  if ((pin || "").length < 6) { showToast("رمز حداقل ۶ کاراکتر باشد ❌"); return; }
+  var pin2 = window.prompt("رمز را دوباره وارد کن:", "");
+  if (pin2 !== pin) { showToast("رمزها یکسان نیستند ❌"); return; }
+  var salt = crypto.getRandomValues(new Uint8Array(16));
+  showToast("در حال راه‌اندازی همگام‌سازی… ⏳");
+  deriveKey(pin, salt).then(function (k) {
+    return syncKeyPut(k).then(function () { return k; });
+  }).then(function (k) {
+    SYNC.key = k;
+    SYNC.cfg = { on: true, salt: b2b64(salt), dv: "d" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), lastRev: 0, lastHash: null, t: 0 };
+    syncSaveCfg();
+    return syncCheck(false).then(function (had) { if (!had) return syncPush(true); });
+  }).then(function () {
+    syncStartPoll();
+    syncRender("راه‌اندازی شد");
+    showToast("همگام‌سازی روشن شد ✅");
+  }).catch(function () { showToast("راه‌اندازی همگام‌سازی ناموفق بود ❌"); });
+}
+
+function syncDisable() {
+  if (!window.confirm("همگام‌سازی خاموش شود؟ نسخه ابری پاک نمی‌شود و بعداً می‌توانی دوباره وصل شوی.")) return;
+  if (!SYNC.cfg) syncLoadCfg();
+  if (SYNC.cfg) { SYNC.cfg.on = false; syncSaveCfg(); }
+  clearInterval(SYNC.pollT); SYNC.pollT = null;
+  clearTimeout(SYNC.pushT); SYNC.pushT = null;
+  syncKeyDel();
+  SYNC.key = null; SYNC.conflict = null;
+  syncRender("خاموش شد");
+}
+
+function syncSoon() {
+  if (!SYNC.cfg) syncLoadCfg();
+  if (!SYNC.cfg || !SYNC.cfg.on) return;
+  clearTimeout(SYNC.pushT);
+  SYNC.pushT = setTimeout(function () { syncPush(false); }, 15000);
+}
+
+function syncPush(force) {
+  if (!SYNC.cfg || !SYNC.cfg.on || !CLOUD.ok || !CLOUD.uid || SYNC.busy) return Promise.resolve(false);
+  var u = CLOUD.auth && CLOUD.auth.currentUser;
+  if (!u || u.isAnonymous) return Promise.resolve(false);
+  if (document.visibilityState === "hidden" && !force) return Promise.resolve(false);
+  var raw = JSON.stringify(state);
+  var h = syncHash(raw);
+  if (!force && h === SYNC.cfg.lastHash) return Promise.resolve(false);
+  if (raw.length + 200 > 850000) { syncRender("داده برای همگام‌سازی بزرگ است"); return Promise.resolve(false); }
+  SYNC.busy = true;
+  var ref = CLOUD.db.collection("sync").doc(CLOUD.uid);
+  return syncEnsureKey().then(function (k) {
+    return encryptText(k, b642buf(SYNC.cfg.salt), raw);
+  }).then(function (blob) {
+    return CLOUD.db.runTransaction(function (tx) {
+      return tx.get(ref).then(function (d) {
+        var cur = (d.exists && typeof d.data().rev === "number") ? d.data().rev : 0;
+        if (!force && cur > (SYNC.cfg.lastRev || 0)) throw { code: "sync/stale" };
+        tx.set(ref, { blob: blob, rev: cur + 1, t: Date.now(), dv: SYNC.cfg.dv }, { merge: true });
+        return cur + 1;
+      });
+    });
+  }).then(function (rev) {
+    SYNC.cfg.lastRev = rev; SYNC.cfg.lastHash = h; SYNC.cfg.t = Date.now();
+    syncSaveCfg();
+    syncRender("ارسال شد");
+    return true;
+  }).catch(function (e) {
+    if (e && e.code === "sync/stale") { syncRender("نسخه ابری جدیدتر است"); syncCheck(false); }
+    else syncRender("ارسال ناموفق");
+    return false;
+  }).then(function (v) { SYNC.busy = false; return v; }, function (e) { SYNC.busy = false; throw e; });
+}
+
+function syncApplyDoc(doc) {
+  if (!doc || typeof doc.blob !== "string") return Promise.reject(new Error("bad"));
+  if (lockState.key) { showToast("اول قفل رمز را بردار 🔒"); return Promise.reject(new Error("locked")); }
+  var parts = doc.blob.slice(LOCK_PREFIX.length).split("|");
+  if (parts.length !== 3) return Promise.reject(new Error("bad"));
+  SYNC.busy = true;
+  return syncEnsureKey().then(function (k) {
+    return crypto.subtle.decrypt({ name: "AES-GCM", iv: b642buf(parts[1]) }, k, b642buf(parts[2]));
+  }).then(function (pt) {
+    var incoming = JSON.parse(new TextDecoder().decode(pt));
+    if (!isUsableBackupData(incoming)) throw new Error("bad");
+    incoming = sanitize(incoming);
+    // قبل از جایگزینی، یک نسخه محلی نگه می‌داریم تا هیچ چیزی گم نشود
+    try { window.localStorage.setItem(SYNC_PRE_KEY, JSON.stringify(state)); } catch (e) {}
+    state = incoming;
+    if (!state.tz) state.tz = browserTz();
+    acctAfterLocalReplace();
+    ensureCat(); ensureProfile(); ensureMissions();
+    snapshotDay();
+    saveState();
+    renderAll();
+    renderProfile();
+    renderCloud();
+    renderBackupInfo();
+    switchTab(state.tab || "home");
+    SYNC.cfg.lastRev = doc.rev || 0;
+    SYNC.cfg.lastHash = syncHash(JSON.stringify(state));
+    syncSaveCfg();
+    SYNC.conflict = null;
+    syncRender("از دستگاه دیگر اعمال شد");
+    cloudPush(true);
+    showToast("همگام‌سازی شد ✅");
+    return true;
+  }).then(function (v) { SYNC.busy = false; return v; }, function (e) { SYNC.busy = false; throw e; });
+}
+
+function syncCheck(manual) {
+  if (!SYNC.cfg || !SYNC.cfg.on || !CLOUD.ok || !CLOUD.uid) return Promise.resolve(false);
+  if (SYNC.busy) return Promise.resolve(false);
+  if (document.visibilityState === "hidden" && !manual) return Promise.resolve(false);
+  var ref = CLOUD.db.collection("sync").doc(CLOUD.uid);
+  return ref.get().then(function (d) {
+    if (!d.exists) {
+      if (manual) showToast("نسخه ابری هنوز ساخته نشده — «ارسال الان» را بزن");
+      return false;
+    }
+    var doc = d.data() || {};
+    var rrev = typeof doc.rev === "number" ? doc.rev : 0;
+    if (rrev <= (SYNC.cfg.lastRev || 0)) {
+      if (manual) showToast("همین حالا همگام است ✅");
+      return false;
+    }
+    var localHash = syncHash(JSON.stringify(state));
+    if (localHash !== (SYNC.cfg.lastHash || "")) {
+      SYNC.conflict = { doc: doc };
+      syncRender("نسخه ابری جدیدتر است — انتخاب کن");
+      if (manual) showToast("نسخه ابری جدیدتر است؛ یکی از دو گزینه را انتخاب کن ⚠️");
+      return true;
+    }
+    return syncApplyDoc(doc).then(function () { return true; });
+  }).catch(function () {
+    syncRender("دریافت ناموفق");
+    if (manual) showToast("دریافت ناموفق ❌");
+    return false;
+  });
+}
+
+function syncResolveCloud() {
+  if (!SYNC.conflict) return;
+  if (!window.confirm("داده‌های فعلی این دستگاه با نسخه ابری جایگزین شود؟ یک نسخه از داده فعلی به‌صورت محلی نگه داشته می‌شود.")) return;
+  syncApplyDoc(SYNC.conflict.doc).catch(function () { showToast("اعمال نسخه ابری ناموفق بود ❌"); });
+}
+
+function syncStartPoll() {
+  clearInterval(SYNC.pollT);
+  SYNC.pollT = setInterval(function () {
+    if (document.visibilityState === "hidden") return;
+    syncCheck(false);
+  }, 120000);
+}
+
+function syncBoot() {
+  syncLoadCfg();
+  syncRender();
+  if (!SYNC.cfg || !SYNC.cfg.on) return;
+  syncEnsureKey().catch(function () {
+    if (SYNC.cfg) { SYNC.cfg.on = false; syncSaveCfg(); }
+    syncRender("کلید روی این دستگاه نیست — دوباره روشن کن");
+  });
+  syncStartPoll();
+  setTimeout(function () { syncCheck(false); }, 4000);
 }
 
 function backupAgeLabel(ts) {
