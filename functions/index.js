@@ -1,77 +1,162 @@
 /**
- * منبع مرجع امتیازدهی سمت سرور — «مستقر نشده».
+ * توابع سرور «کارهای روزانه» — منبع مرجع؛ در این نسخه مستقر نشده است.
  *
- * این فایل در این مخزن فقط به‌عنوان پیاده‌سازی مرجع نگه داشته می‌شود و کلاینت
- * به آن وصل نیست. برای فعال‌سازی واقعی: پروژه باید پلن Blaze داشته باشد،
- * Firebase CLI و Node نصب باشد، سپس:
+ * فعال‌سازی: پلن Blaze + Firebase CLI + Node 20، سپس
  *   cd functions && npm install && firebase deploy --only functions
- * تا آن زمان امتیازها در Firestore با قوانین محدودکننده‌ی سمت کلاینت کنترل
- * می‌شوند (سقف XP هر آپدیت، سقف روز/هفته) و «صحت کامل امتیاز» تضمین‌شده نیست.
+ * سپس قوانین stage2 (firebase-rules/firestore.rules.stage2) را منتشر کن تا
+ * نوشتن مستقیم XP از مرورگر بسته شود. تا آن زمان امتیاز فقط با قوانین
+ * محدودکننده‌ی سمت کلاینت کنترل می‌شود و تضمین کامل ضدتقلب ندارد.
  */
-const functions = require("firebase-functions");
+const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { onSchedule } = require("firebase-functions/v2/scheduler");
 const admin = require("firebase-admin");
 
 admin.initializeApp();
 const db = admin.firestore();
 
-// هزینه‌ی ثابت هر عملیات؛ کلاینت هیچ عددی نمی‌فرستد
+// هزینه‌ی هر عملیات فقط اینجا تعیین می‌شود؛ کلاینت هیچ عددی نمی‌فرستد.
 const ACTION_COSTS = {
   taskDone: 5,
   fullDay: 20,
   gameWin: 10,
   riddleSolved: 8,
   catCare: 4,
+  missionDone: 10,
+};
+const ACTION_COINS = {
+  taskDone: 1,
+  fullDay: 5,
+  gameWin: 3,
+  riddleSolved: 2,
+  catCare: 1,
+  missionDone: 3,
 };
 const DAILY_CAP = 300;
 const WEEKLY_CAP = 500;
+const ENFORCE_APPCHECK = process.env.ENFORCE_APPCHECK === "true";
 
 function dayKeyUTC(ms) {
   return new Date(ms).toISOString().slice(0, 10);
 }
+function weekKeyUTC(ms) {
+  const d = new Date(ms);
+  const day = (d.getUTCDay() + 6) % 7; // دوشنبه = 0
+  const mon = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - day));
+  return mon.toISOString().slice(0, 10);
+}
 
-exports.awardPoints = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError("unauthenticated", "ورود لازم است");
-  }
-  const uid = context.auth.uid;
-  const action = String(data && data.action || "");
-  const txId = String(data && data.txId || "");
-  const cost = ACTION_COSTS[action];
-  if (!cost) {
-    throw new functions.https.HttpsError("invalid-argument", "عملیات نامعتبر");
+// پاداش اتمیک با شناسه‌ی یکتا؛ تکرار همان txId پاداش دوباره نمی‌دهد.
+exports.awardPoints = onCall({ enforceAppCheck: ENFORCE_APPCHECK, region: "us-central1" }, async (req) => {
+  if (!req.auth) throw new HttpsError("unauthenticated", "ورود لازم است");
+  const uid = req.auth.uid;
+  const action = String((req.data && req.data.action) || "");
+  const txId = String((req.data && req.data.txId) || "");
+  if (!Object.prototype.hasOwnProperty.call(ACTION_COSTS, action)) {
+    throw new HttpsError("invalid-argument", "عملیات نامعتبر");
   }
   if (!/^[a-zA-Z0-9_-]{8,64}$/.test(txId)) {
-    throw new functions.https.HttpsError("invalid-argument", "شناسه تراکنش نامعتبر");
+    throw new HttpsError("invalid-argument", "شناسه تراکنش نامعتبر");
   }
-  const now = Date.now();
+  const now = admin.firestore.Timestamp.now().toMillis(); // ساعت سرور
   const day = dayKeyUTC(now);
-  const week = dayKeyUTC(now - ((now % 604800000)));
+  const week = weekKeyUTC(now);
+  const cost = ACTION_COSTS[action];
+  const coins = ACTION_COINS[action];
+  const userRef = db.doc(`users/${uid}`);
+  const txRef = db.doc(`pointTransactions/${uid}/items/${day}_${txId}`);
 
-  const dayRef = db.doc(`pointTransactions/${uid}/items/${day + "_" + txId}`);
   return db.runTransaction(async (tx) => {
-    const userRef = db.doc(`users/${uid}`);
-    const [dup, userSnap] = await Promise.all([tx.get(dayRef), tx.get(userRef)]);
+    const [dup, snap] = await Promise.all([tx.get(txRef), tx.get(userRef)]);
+    if (!snap.exists) throw new HttpsError("not-found", "کاربر پیدا نشد");
+    const u = snap.data();
+    const xp = Math.max(0, Number(u.xp) || 0);
+    const coinsBal = Math.max(0, Number(u.coins) || 0);
+    const dayTotal = u.xpDayStart === day ? Math.max(0, Number(u.xpDayTotal) || 0) : 0;
+    const weekTotal = u.weekStart === week ? Math.max(0, Number(u.weekTotal) || 0) : 0;
     if (dup.exists) {
-      throw new functions.https.HttpsError("already-exists", "این پاداش قبلاً ثبت شده");
+      return { ok: true, dup: true, awarded: 0, coins: 0, xp, dayTotal, weekTotal };
     }
-    if (!userSnap.exists) {
-      throw new functions.https.HttpsError("not-found", "کاربر پیدا نشد");
+    const room = Math.max(0, Math.min(cost, DAILY_CAP - dayTotal, WEEKLY_CAP - weekTotal));
+    if (room <= 0) {
+      throw new HttpsError("resource-exhausted", "سقف امتیاز روز/هفته پر شده");
     }
-    const u = userSnap.data();
-    const xp = Number(u.xp) || 0;
-    const xpDay = u.xpDayStart === day ? (Number(u.xpDayTotal) || 0) : 0;
-    const weekTotal = u.weekStart === week ? (Number(u.weekTotal) || 0) : 0;
-    if (xpDay + cost > DAILY_CAP || weekTotal + cost > WEEKLY_CAP) {
-      throw new functions.https.HttpsError("resource-exhausted", "سقف امتیاز روز/هفته پر شده");
-    }
+    const newDay = dayTotal + room;
+    const newWeek = weekTotal + room;
     tx.set(userRef, {
-      xp: xp + cost,
+      xp: xp + room,
+      coins: coinsBal + Math.round((coins * room) / cost),
       xpDayStart: day,
-      xpDayTotal: xpDay + cost,
+      xpDayTotal: newDay,
       weekStart: week,
-      weekTotal: weekTotal + cost,
+      weekTotal: newWeek,
+      updated: admin.firestore.FieldValue.serverTimestamp(),
     }, { merge: true });
-    tx.set(dayRef, { action, cost, at: now, uid, day, week });
-    return { ok: true, awarded: cost, xp: xp + cost, dayTotal: xpDay + cost };
+    tx.set(txRef, { uid, action, cost: room, coins, day, week, at: now });
+    return { ok: true, dup: false, awarded: room, coins: Math.round((coins * room) / cost), xp: xp + room, dayTotal: newDay, weekTotal: newWeek };
   });
+});
+
+// حذف آبشاری و قابل‌ادامه‌ی همه‌ی داده‌های وابسته به UID؛ Auth آخر کار.
+// پیشرفت در deletions/{uid} ذخیره می‌شود تا اجرای نیمه‌کاره از همان‌جا ادامه یابد.
+exports.accountDelete = onCall({ enforceAppCheck: ENFORCE_APPCHECK, region: "us-central1", timeoutSeconds: 540 }, async (req) => {
+  if (!req.auth) throw new HttpsError("unauthenticated", "ورود لازم است");
+  const uid = req.auth.uid;
+  const progressRef = db.doc(`deletions/${uid}`);
+  const counts = { posts: 0, legacyPosts: 0, reactions: 0, reports: 0, rooms: 0, roomsLeft: 0, invites: 0, sync: 0 };
+  const bump = (k, n) => { counts[k] += n || 0; };
+
+  async function eachPage(query, fn, size = 200) {
+    for (;;) {
+      const qs = await query.limit(size).get();
+      if (qs.empty) return;
+      for (const d of qs.docs) await fn(d);
+      if (qs.size < size) return;
+    }
+  }
+
+  await progressRef.set({ status: "running", startedAt: admin.firestore.FieldValue.serverTimestamp(), uid }, { merge: true });
+
+  try {
+    // واکنش‌های من روی پست دیگران (بدون Admin SDK ممکن نیست)
+    await eachPage(
+      db.collectionGroup("posts").where(`re.${uid}`, "!=", null),
+      async (d) => {
+        const patch = {};
+        patch[`re.${uid}`] = admin.firestore.FieldValue.delete();
+        await d.ref.update(patch);
+        bump("reactions");
+      }
+    );
+    await eachPage(db.collection("feed").doc(uid).collection("posts"), async (d) => { await d.ref.delete(); bump("posts"); });
+    await eachPage(db.collection("feed").where("uid", "==", uid), async (d) => { await d.ref.delete(); bump("legacyPosts"); });
+    await eachPage(db.collection("reports").where("by", "==", uid), async (d) => { await d.ref.delete(); bump("reports"); });
+    await eachPage(db.collection("rooms").where("h", "==", uid), async (d) => { await d.ref.delete(); bump("rooms"); });
+    await eachPage(db.collection("rooms").where("g", "==", uid), async (d) => {
+      await d.ref.update({ g: null, gnn: "", gav: "" }); bump("roomsLeft");
+    });
+    await eachPage(db.collection("invites").where("uid", "==", uid), async (d) => { await d.ref.delete(); bump("invites"); });
+    if ((await db.doc(`sync/${uid}`).get()).exists) { bump("sync", 1); }
+    const singles = ["users", "publicProfiles", "friendships", "backups", "sync"];
+    for (const c of singles) {
+      try { await db.doc(`${c}/${uid}`).delete(); } catch (e) { /* سند نبود */ }
+    }
+    await progressRef.set({ status: "done", finishedAt: admin.firestore.FieldValue.serverTimestamp(), counts }, { merge: true });
+    await admin.auth().deleteUser(uid); // فقط بعد از موفقیت پاک‌سازی
+    return { ok: true, counts };
+  } catch (e) {
+    await progressRef.set({ status: "partial", error: String(e && e.message || e), counts }, { merge: true });
+    throw new HttpsError("internal", "پاک‌سازی کامل نشد؛ دوباره تلاش کن");
+  }
+});
+
+// پاک‌سازی زمان‌بندی‌شده‌ی اتاق‌های منقضی و اتاق‌های قدیمی بدون exp
+exports.expireRooms = onSchedule({ schedule: "every 60 minutes", region: "us-central1" }, async () => {
+  const now = Date.now();
+  const expired = await db.collection("rooms").where("exp", "<", now).limit(300).get();
+  const batch = db.batch();
+  expired.forEach((d) => batch.delete(d.ref));
+  const legacy = await db.collection("rooms").where("t", "<", now - 8 * 86400000).limit(300).get();
+  legacy.forEach((d) => { if (!d.data().exp) batch.delete(d.ref); });
+  if (!expired.empty || !legacy.empty) await batch.commit();
+  return null;
 });
