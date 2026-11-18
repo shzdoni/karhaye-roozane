@@ -1014,7 +1014,7 @@
   <div class="card" id="acctCard">
     <h2 class="section-title">🔐 حساب من <span id="acctBadge" class="acct-badge">مهمان</span></h2>
     <div id="acctGuestBox">
-      <p class="card-hint">با حساب واقعی، رتبه و دوست‌هات بین دستگاه‌ها هم می‌مونن. کارها، یادداشت‌ها و حال‌وهوا همچنان <b>فقط روی همین دستگاه</b> ذخیره می‌شن. مهمان هم می‌تونی بمونی.</p>
+      <p class="card-hint">با حساب واقعی، رتبه و دوست‌هات بین دستگاه‌ها هم می‌مونن. به‌صورت پیش‌فرض کارها، یادداشت‌ها و حال‌وهوا <b>فقط روی همین دستگاه</b> ذخیره می‌شن؛ اگر در تب باشگاه «همگام‌سازی رمزدار» را روشن کنی، بین دستگاه‌های خودت هم ادغام می‌شن (آزمایشی). مهمان هم می‌تونی بمونی.</p>
       <div class="acct-grid">
         <input type="email" id="acctEmail" class="acct-in" dir="ltr" maxlength="120" autocomplete="email" placeholder="ایمیل">
         <input type="password" id="acctPass" class="acct-in" dir="ltr" maxlength="72" autocomplete="current-password" placeholder="رمز (حداقل ۶ کاراکتر)">
@@ -1036,7 +1036,7 @@
         <button type="button" class="footer-btn" id="acctSignOut">🚪 خروج از این دستگاه</button>
         <button type="button" class="footer-btn" id="acctDelete">🗑 حذف حساب</button>
       </div>
-      <p class="card-hint">داده‌های شخصی این دستگاه با خروج پاک نمی‌شوند؛ فقط برای همین حساب بایگانی می‌شوند و با ورود دوباره برمی‌گردند. خروج از همه دستگاه‌ها نیاز به سرور دارد و در مرحلهٔ بعد اضافه می‌شود.</p>
+      <p class="card-hint">داده‌های شخصی این دستگاه با خروج پاک نمی‌شوند؛ فقط برای همین حساب بایگانی می‌شوند و با ورود دوباره برمی‌گردند. «خروج از همه دستگاه‌ها» هنوز پیاده نشده و دکمه‌ی بالا فقط همین دستگاه را خارج می‌کند.</p>
     </div>
   </div>
 
@@ -6799,7 +6799,7 @@ function renderCloud() {
 
 var BACKUP_APP = "karhaye-roozane";
 var BACKUP_VER = 2;
-var APP_VER = "3.6.0";
+var APP_VER = "3.6.1";
 var pendingImport = null;
 var importTries = 0;
 
@@ -7210,7 +7210,7 @@ function syncRender(note) {
   box.appendChild(head);
   var hint = document.createElement("p");
   hint.className = "card-hint";
-  hint.textContent = "کارها، تنظیمات، یادداشت و وضعیت گربه با رمز خودت رمز می‌شوند؛ فقط متن رمزشده در ابر می‌ماند و کلید فقط روی همین دستگاه ذخیره می‌شود. تغییرات دو دستگاه ادغام می‌شوند و حذف‌ها هم منتقل می‌شوند.";
+  hint.textContent = "کارها، تنظیمات، یادداشت و وضعیت گربه با رمز خودت رمز می‌شوند؛ فقط متن رمزشده در ابر می‌ماند و کلید فقط روی همین دستگاه ذخیره می‌شود. تغییرات دو دستگاه ادغام می‌شوند و حذف‌ها هم منتقل می‌شوند. این قابلیت هنوز آزمایشی است؛ قبل از اتکا، پشتیبان بگیر.";
   box.appendChild(hint);
   var u = CLOUD.auth && CLOUD.auth.currentUser;
   if (!CLOUD.ok || !u || u.isAnonymous) {
@@ -7239,8 +7239,17 @@ function syncRender(note) {
   var st = document.createElement("p");
   st.className = "card-hint";
   st.style.margin = "0 0 6px";
-  st.textContent = "نسخه ابری: " + toFa(SYNC.cfg.lastRev || 0) + " • " + (SYNC.cfg.pending ? "در انتظار ارسال (وقتی اینترنت بود خودکار می‌رود)…" : (SYNC.note || "آماده"));
+  var stTxt = "نسخه ابری: " + toFa(SYNC.cfg.lastRev || 0) + " • " + (SYNC.cfg.pending ? "در انتظار ارسال (وقتی اینترنت بود خودکار می‌رود)…" : (SYNC.note || "آماده"));
+  if (SYNC.cfg.t) stTxt += " • آخرین همگام‌سازی موفق: " + new Date(SYNC.cfg.t).toLocaleTimeString("fa-IR");
+  st.textContent = stTxt;
   box.appendChild(st);
+  if (SYNC.note && /نمی‌خواند|هم‌خوان|ناموفق|بزرگ|خطا/.test(SYNC.note)) {
+    var fix = document.createElement("p");
+    fix.className = "card-hint";
+    fix.style.color = "#f59e0b";
+    fix.textContent = "راه‌حل: اتصال اینترنت و ورود حساب را بررسی کن؛ اگر پیام «کلید نمی‌خواند» بود، همگام‌سازی را خاموش و با همان رمز نسخه‌ی ابری دوباره روشن کن.";
+    box.appendChild(fix);
+  }
   var b1 = document.createElement("button");
   b1.type = "button"; b1.className = "footer-btn"; b1.textContent = "⤴️ ارسال الان";
   b1.addEventListener("click", function () { syncPush(true); });
