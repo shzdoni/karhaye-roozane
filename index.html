@@ -1032,6 +1032,7 @@
     </div>
     <div id="acctUserBox" style="display:none">
       <p class="card-hint" id="acctWho"></p>
+      <p class="card-hint" id="acctInfra"></p>
       <div class="footer-row" style="margin-top:8px">
         <button type="button" class="footer-btn" id="acctSignOut">🚪 خروج از این دستگاه</button>
         <button type="button" class="footer-btn" id="acctDelete">🗑 حذف حساب</button>
@@ -5532,6 +5533,7 @@ function cloudAttachUser(u) {
     }
     CLOUD.ok = true;
     cloudSetStatus("☁️ آنلاین ✅");
+    if (typeof acctInfraRender === "function") acctInfraRender();
     cloudPush(true);
     cloudRenewInvite();
     cloudEnsureFriendLinks();
@@ -5643,6 +5645,28 @@ function renderAccount() {
     $("acctGuestBox").style.display = "";
     $("acctUserBox").style.display = "none";
   }
+  acctInfraRender();
+}
+
+// وضعیت واقعی اتصال ابری و همگام‌سازی در کارت حساب (بدون ادعای اضافه)
+function acctInfraRender() {
+  var el = $("acctInfra");
+  if (!el) return;
+  var u = ACCOUNT.user;
+  if (!u || u.anonymous) { el.textContent = ""; return; }
+  var parts = [];
+  parts.push(navigator.onLine === false
+    ? "اتصال ابری: آفلاین ⛔ — برنامه‌ی محلی کار می‌کند و ارسال/دریافت ابری بعد از اتصال انجام می‌شود"
+    : "اتصال Firebase: " + (CLOUD.ok ? "متصل ✅" : "در حال اتصال… ⏳"));
+  if (SYNC.cfg && SYNC.cfg.on) {
+    var s = "همگام‌سازی رمزدار: روشن (آزمایشی)";
+    if (SYNC.cfg.t) s += " • آخرین موفق: " + new Date(SYNC.cfg.t).toLocaleTimeString("fa-IR");
+    if (SYNC.cfg.pending) s += " • در انتظار ارسال";
+    parts.push(s);
+  } else {
+    parts.push("همگام‌سازی رمزدار: خاموش");
+  }
+  el.textContent = parts.join(" • ");
 }
 
 // پیوند وضعیت محلی با هویت ابری؛ true یعنی ادامه بده
@@ -7278,6 +7302,7 @@ function syncRender(note) {
     row2.appendChild(c1); row2.appendChild(c2);
     box.appendChild(row2);
   }
+  acctInfraRender();
 }
 
 function syncEnable() {
@@ -7601,6 +7626,8 @@ window.addEventListener("online", function () {
     if (SYNC.cfg && SYNC.cfg.pending) syncPush(true);
   }, 1500);
 });
+window.addEventListener("online", function () { acctInfraRender(); });
+window.addEventListener("offline", function () { acctInfraRender(); });
 
 function syncBoot() {
   syncLoadCfg();
