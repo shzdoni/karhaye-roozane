@@ -253,14 +253,14 @@ def main():
     check("میزبان اتاق را حذف می‌کند", delete("rooms/" + rid, A["token"])[0] == 200)
 
     print("== انقضای اتاق ==")
-    exp_soon = int(time.time() * 1000) + 2500
+    exp_soon = int(time.time() * 1000) + 6000
     st, jexp = create("rooms", {"h": A["uid"], "hn": "A", "hav": "😺", "type": "day", "t": now, "exp": exp_soon, "s": {A["uid"]: 0}, "g": None}, A["token"])
     check("اتاق کوتاه‌عمر ساخته می‌شود", st == 200, str(st))
     if st == 200:
         xid = doc_id(jexp["name"])
         CLEANUP.append(("rooms/" + xid, A["token"]))
         check("قبل از انقضا عضو می‌خواند", get_doc("rooms/" + xid, A["token"])[0] == 200)
-        time.sleep(3.5)
+        time.sleep(7.0)
         check("بعد از انقضا خواندن رد می‌شود", is_denied(get_doc("rooms/" + xid, A["token"])[0]))
         check("بعد از انقضا پیوستن رد می‌شود", is_denied(update_fields("rooms/" + xid, {"g": B["uid"], "gnn": "B", "gav": "😺"}, B["token"])[0]))
         check("بعد از انقضا امتیازنویسی رد می‌شود", is_denied(update_fields("rooms/" + xid, {"s": {A["uid"]: 50}}, A["token"])[0]))
