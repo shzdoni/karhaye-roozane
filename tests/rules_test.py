@@ -233,10 +233,13 @@ def main():
     check("خواندن گزارش‌ها توسط A ممنوع", is_denied(http(BASE + "/reports", None, A["token"])[0]))
 
     print("== اتاق‌ها ==")
-    st, jroom = create("rooms", {"h": A["uid"], "hn": "A", "hav": "😺", "type": "day", "t": int(time.time() * 1000), "s": {A["uid"]: 0}, "g": None}, A["token"])
+    now = int(time.time() * 1000)
+    st, jroom = create("rooms", {"h": A["uid"], "hn": "A", "hav": "😺", "type": "day", "t": now, "exp": now + 7 * 86400000, "s": {A["uid"]: 0}, "g": None}, A["token"])
     assert st == 200, "room create failed %s" % st
     rid = doc_id(jroom["name"])
     CLEANUP.append(("rooms/" + rid, A["token"]))
+    check("اتاق بدون exp رد می‌شود", is_denied(create("rooms", {"h": A["uid"], "hn": "A", "hav": "😺", "type": "day", "t": now, "s": {A["uid"]: 0}, "g": None}, A["token"])[0]))
+    check("اتاق با exp بیش از ۸ روز رد می‌شود", is_denied(create("rooms", {"h": A["uid"], "hn": "A", "hav": "😺", "type": "day", "t": now, "exp": now + 9 * 86400000, "s": {A["uid"]: 0}, "g": None}, A["token"])[0]))
     check("B قبل از پیوستن اتاق را نمی‌خواند", is_denied(get_doc("rooms/" + rid, B["token"])[0]))
     check("C اتاق را نمی‌خواند", is_denied(get_doc("rooms/" + rid, C["token"])[0]))
     check("B با update اتمی می‌پیوندد", update_fields("rooms/" + rid, {"g": B["uid"], "gnn": "B", "gav": "😺"}, B["token"])[0] == 200)
@@ -246,7 +249,32 @@ def main():
                    "fields": fields({"s": {A["uid"]: 9999}})},
         "updateMask": {"fieldPaths": ["s"]}}, ], B["token"])[0]))
     check("C هنوز اتاق را نمی‌خواند", is_denied(get_doc("rooms/" + rid, C["token"])[0]))
+    check("B از اتاق خارج می‌شود", update_fields("rooms/" + rid, {"g": None, "gnn": "", "gav": ""}, B["token"])[0] == 200)
     check("میزبان اتاق را حذف می‌کند", delete("rooms/" + rid, A["token"])[0] == 200)
+
+    print("== انقضای اتاق ==")
+    exp_soon = int(time.time() * 1000) + 2500
+    st, jexp = create("rooms", {"h": A["uid"], "hn": "A", "hav": "😺", "type": "day", "t": now, "exp": exp_soon, "s": {A["uid"]: 0}, "g": None}, A["token"])
+    check("اتاق کوتاه‌عمر ساخته می‌شود", st == 200, str(st))
+    if st == 200:
+        xid = doc_id(jexp["name"])
+        CLEANUP.append(("rooms/" + xid, A["token"]))
+        check("قبل از انقضا عضو می‌خواند", get_doc("rooms/" + xid, A["token"])[0] == 200)
+        time.sleep(3.5)
+        check("بعد از انقضا خواندن رد می‌شود", is_denied(get_doc("rooms/" + xid, A["token"])[0]))
+        check("بعد از انقضا پیوستن رد می‌شود", is_denied(update_fields("rooms/" + xid, {"g": B["uid"], "gnn": "B", "gav": "😺"}, B["token"])[0]))
+        check("بعد از انقضا امتیازنویسی رد می‌شود", is_denied(update_fields("rooms/" + xid, {"s": {A["uid"]: 50}}, A["token"])[0]))
+        check("میزبان اتاق منقضی را حذف می‌کند", delete("rooms/" + xid, A["token"])[0] == 200)
+
+    print("== همگام‌سازی رمزدار ==")
+    st, _ = create("sync", {"blob": "ENC1:x|y|z", "rev": 1, "t": now, "dv": "dtest"}, A["token"], A["uid"])
+    check("سند sync خودم ساخته می‌شود", st == 200, str(st))
+    CLEANUP.append(("sync/" + A["uid"], A["token"]))
+    check("خواندن sync دیگران ممنوع", is_denied(get_doc("sync/" + B["uid"], A["token"])[0]))
+    check("نوشتن sync دیگری ممنوع", is_denied(http(BASE + "/sync/" + B["uid"], {"fields": fields({"blob": "x", "rev": 1, "t": 1, "dv": "d"})}, A["token"], method="PATCH")[0]))
+    check("sync بدون rev رد می‌شود", is_denied(create("sync", {"blob": "x", "t": 1, "dv": "d"}, A["token"], A["uid"])[0]))
+    check("sync بزرگ‌تر از سقف رد می‌شود", is_denied(http(BASE + "/sync/" + A["uid"], {"fields": fields({"blob": "x" * 900001, "rev": 2, "t": 1, "dv": "d"})}, A["token"], method="PATCH")[0]))
+    check("لیست sync ممنوع", is_denied(http(BASE + "/sync", None, A["token"])[0]))
 
     print("== پشتیبان و مجموعه‌های رزرو ==")
     check("backup بزرگ‌تر از سقف رد می‌شود", is_denied(create("backups", {"blob": "x" * 900001, "t": 1, "v": 2}, A["token"], A["uid"])[0]))
