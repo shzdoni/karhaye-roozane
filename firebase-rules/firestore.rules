@@ -159,16 +159,29 @@ service cloud.firestore {
     }
 
     // اتاق مسابقه: فقط میزبان و مهمان می‌توانند بخوانند/بنویسند؛ پیوستن با یک update اتمی
+    // هر اتاق حداکثر ۸ روز عمر دارد؛ ورود/امتیاز/پیوستن روی اتاق منقضی ممنوع است.
+    function roomLive() {
+      return !('exp' in resource.data) || resource.data.exp > request.time.toMillis();
+    }
+    function roomExpOk(d) {
+      return d.exp is number
+        && d.exp > request.time.toMillis()
+        && d.exp <= request.time.toMillis() + 691200000;
+    }
     match /rooms/{id} {
-      allow get: if signedIn() && (resource.data.h == request.auth.uid || resource.data.g == request.auth.uid);
+      allow get: if signedIn()
+        && (resource.data.h == request.auth.uid || resource.data.g == request.auth.uid)
+        && roomLive();
       allow list: if signedIn()
-        && (resource.data.h == request.auth.uid || resource.data.g == request.auth.uid);
+        && (resource.data.h == request.auth.uid || resource.data.g == request.auth.uid)
+        && roomLive();
       allow create: if signedIn()
         && request.resource.data.h == request.auth.uid
         && request.resource.data.hn is string && request.resource.data.hn.size() <= 40
         && request.resource.data.hav is string && request.resource.data.hav.size() <= 4
         && request.resource.data.type is string
         && request.resource.data.t is number
+        && roomExpOk(request.resource.data)
         && request.resource.data.s is map
         && request.resource.data.s.keys().hasOnly([request.auth.uid])
         && request.resource.data.s[request.auth.uid] is number
@@ -176,6 +189,7 @@ service cloud.firestore {
         && request.resource.data.s[request.auth.uid] <= 100000
         && request.resource.data.g == null;
       allow update: if signedIn()
+        && roomLive()
         && (
           // پیوستن مهمان فقط وقتی جای خالی است
           (resource.data.g == null
@@ -199,7 +213,7 @@ service cloud.firestore {
             && request.resource.data.s[request.auth.uid] >= 0
             && request.resource.data.s[request.auth.uid] <= 100000)
         );
-      // میزبان می‌تواند اتاق را حذف کند (پاک‌سازی حساب)
+      // میزبان می‌تواند اتاق را حذف کند (پاک‌سازی حساب / اتاق منقضی)
       allow delete: if signedIn() && resource.data.h == request.auth.uid;
     }
 
@@ -212,6 +226,21 @@ service cloud.firestore {
         && request.resource.data.blob.size() <= 900000
         && request.resource.data.t is number
         && request.resource.data.v is number;
+      allow delete: if isOwner(uid);
+    }
+
+    // همگام‌سازی رمزدار چنددستگاهی: فقط صاحب حساب، فقط متن رمزشده
+    match /sync/{uid} {
+      allow get: if isOwner(uid);
+      allow list: if false;
+      allow create, update: if isOwner(uid)
+        && request.resource.data.blob is string
+        && request.resource.data.blob.size() <= 900000
+        && request.resource.data.rev is number
+        && request.resource.data.rev >= 1
+        && request.resource.data.t is number
+        && request.resource.data.dv is string
+        && request.resource.data.dv.size() <= 40;
       allow delete: if isOwner(uid);
     }
 

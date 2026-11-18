@@ -1,0 +1,278 @@
+// مرحله ۲ — فقط بعد از deploy موفق awardPoints منتشر شود (XP/Coins فقط سمت سرور)
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{db}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function isOwner(uid) { return signedIn() && request.auth.uid == uid; }
+    function privacyBool(p, k, dflt) { return !(k in p) || p[k] == dflt || p[k] is bool; }
+    function profileOf(uid) {
+      return get(/databases/$(db)/documents/publicProfiles/$(uid)).data;
+    }
+    // بلاک دوطرفه: اگر هرکدام دیگری را بلاک کرده باشد، دسترسی فید قطع می‌شود
+    function blockedBy(a, b) {
+      return exists(/databases/$(db)/documents/users/$(a))
+        && get(/databases/$(db)/documents/users/$(a)).data.get('blocked', {}).get(b, false) == true;
+    }
+    function blockedBetween(a, b) { return blockedBy(a, b) || blockedBy(b, a); }
+    function blockedMapOk(d) {
+      return !('blocked' in d) || (d.blocked is map && d.blocked.size() <= 200);
+    }
+    function blockedNamesOk(d) {
+      return !('blockedNames' in d) || (d.blockedNames is map && d.blockedNames.size() <= 200);
+    }
+    // خواندن فید: صاحب فید، یا دوستی که صاحب فید او را در لیست اشتراک گذاشته
+    // و پروفایل عمومی‌اش فعال و اشتراک فیدش روشن است و هیچ‌کدام دیگری را بلاک نکرده‌اند.
+    function canSeeFeed(owner) {
+      return signedIn() && (
+        request.auth.uid == owner ||
+        (exists(/databases/$(db)/documents/friendships/$(owner))
+          && get(/databases/$(db)/documents/friendships/$(owner)).data.links.get(request.auth.uid, false) == true
+          && exists(/databases/$(db)/documents/publicProfiles/$(owner))
+          && profileOf(owner).privacy.get('share', true) == true
+          && profileOf(owner).privacy.get('feed', true) == true
+          && !blockedBetween(request.auth.uid, owner))
+      );
+    }
+    function feedShape(d, owner) {
+      return d.uid == owner
+        && d.txt is string && d.txt.size() <= 120
+        && d.t is number
+        && d.name is string && d.name.size() <= 40
+        && d.av is string && d.av.size() <= 4
+        && d.col is string && d.col.matches('^#[0-9a-fA-F]{6}$')
+        && d.re is map && d.re.size() == 0;
+    }
+    // واکنش فقط از بین ایموجی‌های مجاز، و هر کاربر فقط کلید خودش را تغییر می‌دهد
+    function reactionOk(d, prev) {
+      return d.diff(prev).affectedKeys().hasOnly(['re'])
+        && d.re is map
+        && d.re.diff(prev.re).affectedKeys().hasOnly([request.auth.uid])
+        && (!(request.auth.uid in d.re)
+          || (d.re[request.auth.uid] is string
+              && d.re[request.auth.uid].size() <= 8
+              && d.re[request.auth.uid] in ['💪', '❤️', '🔥', '🎉']));
+    }
+    function expOk(d) {
+      return !('exp' in d)
+        || (d.exp is number
+            && d.exp > request.time.toMillis()
+            && d.exp <= request.time.toMillis() + 3456000000);
+    }
+
+    // داده‌ی خصوصی: فقط صاحب سند
+    match /users/{uid} {
+      allow get: if isOwner(uid);
+      allow list: if false;
+      allow create: if isOwner(uid)
+        && request.resource.data.xp == 0
+        && (!('coins' in request.resource.data) || request.resource.data.coins == 0)
+        && request.resource.data.week is number && request.resource.data.week >= 0 && request.resource.data.week <= 500
+        && request.resource.data.day is number && request.resource.data.day >= 0 && request.resource.data.day <= 300
+        && request.resource.data.name is string && request.resource.data.name.size() <= 40
+        && request.resource.data.invite is string
+        && request.resource.data.created is number
+        && request.resource.data.privacy is map && request.resource.data.privacy.share is bool
+        && blockedMapOk(request.resource.data)
+        && blockedNamesOk(request.resource.data);
+      allow update: if isOwner(uid)
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['xp', 'coins', 'xpDayStart', 'xpDayTotal', 'weekStart', 'weekTotal'])
+        && request.resource.data.week is number && request.resource.data.week >= 0 && request.resource.data.week <= 500
+        && request.resource.data.week - resource.data.week <= 60
+        && request.resource.data.day is number && request.resource.data.day >= 0 && request.resource.data.day <= 300
+        && request.resource.data.day - resource.data.day <= 60
+        && request.resource.data.name is string && request.resource.data.name.size() <= 40
+        && request.resource.data.av is string && request.resource.data.av.size() <= 4
+        && request.resource.data.col is string && request.resource.data.col.matches('^#[0-9a-fA-F]{6}$')
+        && request.resource.data.privacy is map && request.resource.data.privacy.share is bool
+        && request.resource.data.invite == resource.data.invite
+        && request.resource.data.created == resource.data.created
+        && blockedMapOk(request.resource.data)
+        && blockedNamesOk(request.resource.data);
+      allow delete: if isOwner(uid);
+    }
+
+    // نسخه‌ی عمومیِ کم‌داده؛ فقط وقتی خود کاربر اجازه داده ساخته می‌شود
+    match /publicProfiles/{uid} {
+      allow get: if signedIn();
+      allow list: if false;
+      allow create, update: if isOwner(uid)
+        && request.resource.data.name is string && request.resource.data.name.size() <= 40
+        && request.resource.data.av is string && request.resource.data.av.size() <= 4
+        && request.resource.data.col is string && request.resource.data.col.matches('^#[0-9a-fA-F]{6}$')
+        && request.resource.data.day is number && request.resource.data.day >= 0 && request.resource.data.day <= 300
+        && request.resource.data.week is number && request.resource.data.week >= 0 && request.resource.data.week <= 500
+        && request.resource.data.days is map
+        && request.resource.data.privacy is map
+        && request.resource.data.privacy.share == true
+        && privacyBool(request.resource.data.privacy, 'name', true)
+        && privacyBool(request.resource.data.privacy, 'score', true)
+        && privacyBool(request.resource.data.privacy, 'medals', true)
+        && privacyBool(request.resource.data.privacy, 'cat', true)
+        && privacyBool(request.resource.data.privacy, 'feed', true)
+        && privacyBool(request.resource.data.privacy, 'online', false);
+      allow delete: if isOwner(uid);
+    }
+
+    // رضایت اشتراک‌گذاری: صاحب سند فقط برای خودش می‌نویسد که با چه کسانی فیدش را شریک است
+    match /friendships/{uid} {
+      allow get: if isOwner(uid);
+      allow list: if false;
+      allow create, update: if isOwner(uid)
+        && request.resource.data.links is map
+        && request.resource.data.links.size() <= 500;
+      allow delete: if isOwner(uid);
+    }
+
+    // دعوت‌نامه‌ها: کد مالک، قابل تمدید تا ۴۰ روز؛ نبودِ exp برای سازگاری با نسخه‌های قبلی
+    match /invites/{code} {
+      allow get: if signedIn();
+      allow list: if false;
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && code.matches('^[A-Z2-9]{6}$')
+        && expOk(request.resource.data);
+      allow update: if signedIn()
+        && resource.data.uid == request.auth.uid
+        && request.resource.data.uid == resource.data.uid
+        && expOk(request.resource.data);
+      allow delete: if signedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    // فید شخصی هر کاربر (مسیر جدید)
+    match /feed/{owner}/posts/{pid} {
+      allow read: if canSeeFeed(owner);
+      allow create: if isOwner(owner)
+        && feedShape(request.resource.data, owner);
+      allow update: if isOwner(owner) || (canSeeFeed(owner) && reactionOk(request.resource.data, resource.data));
+      allow delete: if isOwner(owner);
+    }
+
+    // فید قدیمی سطح‌بالا: فقط صاحب پست + برای مهاجرت؛ دیگر برای دیگران خواندنی نیست
+    match /feed/{id} {
+      allow get, list: if signedIn() && resource.data.uid == request.auth.uid;
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && feedShape(request.resource.data, request.auth.uid);
+      allow update: if signedIn() && resource.data.uid == request.auth.uid;
+      allow delete: if signedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    // اتاق مسابقه: فقط میزبان و مهمان می‌توانند بخوانند/بنویسند؛ پیوستن با یک update اتمی
+    // هر اتاق حداکثر ۸ روز عمر دارد؛ ورود/امتیاز/پیوستن روی اتاق منقضی ممنوع است.
+    function roomLive() {
+      return !('exp' in resource.data) || resource.data.exp > request.time.toMillis();
+    }
+    function roomExpOk(d) {
+      return d.exp is number
+        && d.exp > request.time.toMillis()
+        && d.exp <= request.time.toMillis() + 691200000;
+    }
+    match /rooms/{id} {
+      allow get: if signedIn()
+        && (resource.data.h == request.auth.uid || resource.data.g == request.auth.uid)
+        && roomLive();
+      allow list: if signedIn()
+        && (resource.data.h == request.auth.uid || resource.data.g == request.auth.uid)
+        && roomLive();
+      allow create: if signedIn()
+        && request.resource.data.h == request.auth.uid
+        && request.resource.data.hn is string && request.resource.data.hn.size() <= 40
+        && request.resource.data.hav is string && request.resource.data.hav.size() <= 4
+        && request.resource.data.type is string
+        && request.resource.data.t is number
+        && roomExpOk(request.resource.data)
+        && request.resource.data.s is map
+        && request.resource.data.s.keys().hasOnly([request.auth.uid])
+        && request.resource.data.s[request.auth.uid] is number
+        && request.resource.data.s[request.auth.uid] >= 0
+        && request.resource.data.s[request.auth.uid] <= 100000
+        && request.resource.data.g == null;
+      allow update: if signedIn()
+        && roomLive()
+        && (
+          // پیوستن مهمان فقط وقتی جای خالی است
+          (resource.data.g == null
+            && request.resource.data.g == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['g', 'gnn', 'gav'])
+            && request.resource.data.gnn is string && request.resource.data.gnn.size() <= 40
+            && request.resource.data.gav is string && request.resource.data.gav.size() <= 4)
+          ||
+          // خروج مهمان (پاک‌سازی حساب)
+          (resource.data.g == request.auth.uid
+            && request.resource.data.g == null
+            && request.resource.data.gnn == ""
+            && request.resource.data.gav == ""
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['g', 'gnn', 'gav']))
+          ||
+          // فقط امتیاز خودم، فقط اگر بازیکن همین اتاق باشم
+          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['s'])
+            && request.resource.data.s.diff(resource.data.s).affectedKeys().hasOnly([request.auth.uid])
+            && (request.auth.uid == resource.data.h || request.auth.uid == resource.data.g)
+            && request.resource.data.s[request.auth.uid] is number
+            && request.resource.data.s[request.auth.uid] >= 0
+            && request.resource.data.s[request.auth.uid] <= 100000)
+        );
+      // میزبان می‌تواند اتاق را حذف کند (پاک‌سازی حساب / اتاق منقضی)
+      allow delete: if signedIn() && resource.data.h == request.auth.uid;
+    }
+
+    // پشتیبان ابری رمزگذاری‌شده: فقط صاحب حساب، محتوای رمزشده
+    match /backups/{uid} {
+      allow get: if isOwner(uid);
+      allow list: if false;
+      allow create, update: if isOwner(uid)
+        && request.resource.data.blob is string
+        && request.resource.data.blob.size() <= 900000
+        && request.resource.data.t is number
+        && request.resource.data.v is number;
+      allow delete: if isOwner(uid);
+    }
+
+    // همگام‌سازی رمزدار چنددستگاهی: فقط صاحب حساب، فقط متن رمزشده
+    match /sync/{uid} {
+      allow get: if isOwner(uid);
+      allow list: if false;
+      allow create, update: if isOwner(uid)
+        && request.resource.data.blob is string
+        && request.resource.data.blob.size() <= 900000
+        && request.resource.data.rev is number
+        && request.resource.data.rev >= 1
+        && request.resource.data.t is number
+        && request.resource.data.dv is string
+        && request.resource.data.dv.size() <= 40;
+      allow delete: if isOwner(uid);
+    }
+
+    // گزارش تخلف: ساختِ یک‌باره توسط خود گزارش‌دهنده؛ فقط خودش می‌تواند ببیند/حذف کند
+    match /reports/{rid} {
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['by', 'target', 'pid', 'reason', 't'])
+        && request.resource.data.by == request.auth.uid
+        && request.resource.data.target is string && request.resource.data.target.size() > 0 && request.resource.data.target.size() <= 128
+        && request.resource.data.pid is string && request.resource.data.pid.size() <= 128
+        && request.resource.data.reason is string && request.resource.data.reason.size() >= 1 && request.resource.data.reason.size() <= 200
+        && request.resource.data.t is number;
+      allow get, list: if signedIn() && resource.data.by == request.auth.uid;
+      allow delete: if signedIn() && resource.data.by == request.auth.uid;
+      allow update: if false;
+    }
+
+    // مجموعه‌های رزرو برای امتیازدهی سمت سرور: کلاینت فقط می‌خواند، نوشتن ممنوع
+    match /pointTransactions/{uid}/items/{txid} {
+      allow read: if isOwner(uid);
+      allow write: if false;
+    }
+    match /achievements/{uid} {
+      allow read: if isOwner(uid);
+      allow write: if false;
+    }
+    match /pets/{uid} {
+      allow read: if isOwner(uid);
+      allow write: if false;
+    }
+    match /challenges/{id} {
+      allow read, write: if false;
+    }
+  }
+}
