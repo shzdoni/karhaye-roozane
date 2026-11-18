@@ -150,13 +150,25 @@ exports.accountDelete = onCall({ enforceAppCheck: ENFORCE_APPCHECK, region: "us-
 });
 
 // پاک‌سازی زمان‌بندی‌شده‌ی اتاق‌های منقضی و اتاق‌های قدیمی بدون exp
-exports.expireRooms = onSchedule({ schedule: "every 60 minutes", region: "us-central1" }, async () => {
+// هر اجرا حداکثر ۵ دسته‌ی ۴۰۰تایی (سقف batch فایربیس ۵۰۰ عملیات است) و قابل تکرار/idempotent.
+exports.expireRooms = onSchedule({ schedule: "every 60 minutes", region: "us-central1", timeoutSeconds: 300 }, async () => {
   const now = Date.now();
-  const expired = await db.collection("rooms").where("exp", "<", now).limit(300).get();
-  const batch = db.batch();
-  expired.forEach((d) => batch.delete(d.ref));
-  const legacy = await db.collection("rooms").where("t", "<", now - 8 * 86400000).limit(300).get();
-  legacy.forEach((d) => { if (!d.data().exp) batch.delete(d.ref); });
-  if (!expired.empty || !legacy.empty) await batch.commit();
-  return null;
+  let deleted = 0, rounds = 0;
+  async function sweep(query, filter) {
+    while (rounds < 5) {
+      rounds++;
+      const qs = await query.limit(400).get();
+      if (qs.empty) return;
+      const docs = filter ? qs.docs.filter(filter) : qs.docs;
+      if (!docs.length) return;
+      const batch = db.batch();
+      docs.forEach((d) => batch.delete(d.ref));
+      await batch.commit();
+      deleted += docs.length;
+      if (qs.size < 400) return;
+    }
+  }
+  await sweep(db.collection("rooms").where("exp", "<", now));
+  await sweep(db.collection("rooms").where("t", "<", now - 8 * 86400000), (d) => !d.data().exp);
+  return { deleted };
 });
