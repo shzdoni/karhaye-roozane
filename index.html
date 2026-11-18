@@ -1325,15 +1325,63 @@ function storageGet() {
   }
 }
 
+/* نسخه پشتیبان داخلی در IndexedDB: اگر localStorage پاک/پر شود، یک نسخه سالم برمی‌گردد */
+var mirrorDbP = null, mirrorT = null, mirrorPending = null;
+function mirrorDb() {
+  if (mirrorDbP) return mirrorDbP;
+  mirrorDbP = new Promise(function (res, rej) {
+    if (!window.indexedDB) { rej(new Error("noidb")); return; }
+    var rq = indexedDB.open("krmirror", 1);
+    rq.onupgradeneeded = function () { if (!rq.result.objectStoreNames.contains("state")) rq.result.createObjectStore("state"); };
+    rq.onsuccess = function () { res(rq.result); };
+    rq.onerror = function () { rej(rq.error); };
+  });
+  return mirrorDbP;
+}
+function mirrorWrite(raw) {
+  if (!window.indexedDB || typeof raw !== "string" || !raw) return;
+  mirrorPending = raw;
+  if (mirrorT) return;
+  mirrorT = setTimeout(function () {
+    mirrorT = null;
+    var w = mirrorPending;
+    mirrorPending = null;
+    if (!w) return;
+    mirrorDb().then(function (db) {
+      var tx = db.transaction("state", "readwrite");
+      tx.objectStore("state").put({ raw: w, t: Date.now() }, "s");
+    }).catch(function () {});
+  }, 2500);
+}
+function mirrorRead() {
+  return mirrorDb().then(function (db) {
+    return new Promise(function (res) {
+      var tx = db.transaction("state", "readonly");
+      var rq = tx.objectStore("state").get("s");
+      tx.oncomplete = function () { res(rq ? rq.result : null); };
+      tx.onerror = function () { res(null); };
+    });
+  }).catch(function () { return null; });
+}
+function mirrorClear() {
+  if (!window.indexedDB) return Promise.resolve();
+  return mirrorDb().then(function (db) {
+    var tx = db.transaction("state", "readwrite");
+    tx.objectStore("state").delete("s");
+  }).catch(function () {});
+}
+
 function storageSet(raw) {
   try {
     window.localStorage.setItem(STORAGE_KEY, raw);
     hideStorageWarn();
     // هر کاراکتر localStorage حدوداً ۲ بایت است؛ نزدیک ۴.۵ مگابایت هشدار بده
     if (raw.length > 2200000) showStorageWarn("near");
+    mirrorWrite(raw);
     return true;
   } catch (e) {
     fallbackStore = raw;
+    mirrorWrite(raw);
     showStorageWarn("full");
     return false;
   }
@@ -1345,6 +1393,8 @@ function storageSave(stateObj) {
   if (lockState.locked) return; // هرگز حین قفل ذخیره نکن
   if (!storageAvailable) showStorageWarn("blocked");
   var raw = JSON.stringify(stateObj);
+  // ثبت زمان تغییر برای ادغام همگام‌سازی (فقط وقتی همگام‌سازی روشن است)
+  try { if (typeof SYNC !== "undefined" && SYNC && SYNC.cfg && SYNC.cfg.on && typeof syncMetaTrack === "function") syncMetaTrack(); } catch (e) {}
   if (!lockState.key) {
     storageSet(raw);
     return;
@@ -1363,9 +1413,11 @@ function storageSave(stateObj) {
 // state = { tasks: [{id, title, createdAt, due?, star?}], history: {...}, birthdays: [...], brain: [...], notes: {...} }
 // تشخیص اینکه حافظه «رمزنگاری‌شده» است (برای نمایش صفحه قفلقبل از هر چیز)
 var bootEncrypted = false;
+var bootHadNoStoredState = false;
 (function () {
   var raw = null;
   try { raw = window.localStorage.getItem(STORAGE_KEY); } catch (e) {}
+  if (!raw) bootHadNoStoredState = true;
   if (typeof raw === "string" && raw.indexOf("ENC1:") === 0) bootEncrypted = true;
 })();
 var state = bootEncrypted ? { tasks: [], history: {}, birthdays: [], brain: [], notes: {}, reminders: [], goals: [], pomos: {}, moods: {}, gratitude: {}, badges: {}, letters: [], challenges: [], trackers: { water: {}, book: {}, sleep: {} }, journals: {}, friends: [], myName: "" } : loadState();
@@ -1375,6 +1427,25 @@ function loadState() {
 }
 
 function saveState() { storageSave(state); }
+
+// اگر localStorage خالی شده باشد ولی نسخه‌ی داخلی IndexedDB سالم باشد، همان را برمی‌گردانیم
+function mirrorRestoreBoot() {
+  if (bootEncrypted || !bootHadNoStoredState || !window.indexedDB) return;
+  mirrorRead().then(function (v) {
+    if (!v || typeof v.raw !== "string" || !v.raw || v.raw.indexOf(LOCK_PREFIX) === 0) return;
+    var parsed;
+    try { parsed = JSON.parse(v.raw); } catch (e) { return; }
+    if (typeof isUsableBackupData === "function" && !isUsableBackupData(parsed)) return;
+    // اگر کاربر در همین یک ثانیه کاری ثبت کرده باشد، بازگردانی نمی‌کنیم
+    var curEmpty = (!state.tasks || !state.tasks.length) && (!state.history || !Object.keys(state.history).length);
+    if (!curEmpty) return;
+    state = sanitize(parsed);
+    saveState();
+    try { ensureCat(); ensureProfile(); ensureMissions(); renderAll(); renderProfile(); if (typeof renderCloud === "function") renderCloud(); } catch (e) {}
+    showToast("داده‌ها از نسخه پشتیبان داخلی مرورگر بازیابی شد ♻️");
+  });
+}
+setTimeout(mirrorRestoreBoot, 1200);
 
 function doneMapFor(key) {
   return state.history[key] || {};
@@ -5469,6 +5540,7 @@ function cloudAttachUser(u) {
     cloudLoadFriendsFeed();
     renderCloud();
     cloudStartPoll();
+    cloudCleanupRooms();
     cloudHandleParam();
     if (typeof syncBoot === "function") syncBoot();
   }).catch(function (e) { cloudSetStatus("☁️ خطا: " + (e.code || "").replace("permission-denied", "اجازه نیست")); });
@@ -5804,21 +5876,44 @@ function acctDeleteQuery(q, size) {
   return acctEachQuery(q, function (d) { return d.ref.delete(); }, size);
 }
 
+// واکنش‌های من روی پست دوستان: قبل از قطع رابطه، کلید re.<uid> از پست‌هایشان پاک می‌شود
+function acctCleanMyReactions(db, uid) {
+  return db.collection("friendships").doc(uid).get().then(function (d) {
+    if (!d.exists) return 0;
+    var links = (d.data() || {}).links || {};
+    var owners = Object.keys(links).filter(function (k) { return links[k] === true; });
+    var sum = 0;
+    var jobs = owners.map(function (owner) {
+      return acctEachQuery(db.collection("feed").doc(owner).collection("posts"), function (pd) {
+        var re = (pd.data() || {}).re;
+        if (!re || !Object.prototype.hasOwnProperty.call(re, uid)) return Promise.resolve();
+        var patch = {};
+        patch["re." + uid] = firebase.firestore.FieldValue.delete();
+        return pd.ref.update(patch).then(function () { sum++; });
+      }, 50);
+    });
+    return Promise.all(jobs).then(function () { return sum; });
+  }).catch(function () { return 0; });
+}
+
 function acctWipeCloud(u, invite) {
   CLOUD.ok = false; CLOUD.me = null;
   if (CLOUD.pollT) { clearInterval(CLOUD.pollT); CLOUD.pollT = null; }
   clearTimeout(CLOUD.pushT);
   var db = CLOUD.db;
   var failed = 0;
-  var counts = { posts: 0, rooms: 0, roomsLeft: 0, legacy: 0 };
+  var counts = { posts: 0, rooms: 0, roomsLeft: 0, legacy: 0, reactions: 0 };
   function safe(p, key) {
     return p.then(function (n) { if (key) counts[key] += (n || 0); })
       .catch(function () { failed++; });
   }
   var jobs = [];
-  jobs.push(safe(db.collection("users").doc(u.uid).delete()));
+  // پاک‌سازی واکنش‌های من روی پست دوستان باید قبل از حذف رابطه‌ها انجام شود
+  var reactions = acctCleanMyReactions(db, u.uid);
+  jobs.push(safe(reactions, "reactions"));
+  jobs.push(safe(reactions.then(function () { return db.collection("users").doc(u.uid).delete(); })));
   jobs.push(safe(db.collection("publicProfiles").doc(u.uid).delete()));
-  jobs.push(safe(db.collection("friendships").doc(u.uid).delete()));
+  jobs.push(safe(reactions.then(function () { return db.collection("friendships").doc(u.uid).delete(); })));
   jobs.push(safe(db.collection("backups").doc(u.uid).delete()));
   jobs.push(safe(db.collection("sync").doc(u.uid).delete()));
   if (invite) jobs.push(safe(db.collection("invites").doc(invite).delete()));
@@ -5862,7 +5957,8 @@ function acctDeleteRun() {
   var email = u.email || "";
   var invite = (CLOUD.me && CLOUD.me.invite) || null;
   var uid = u.uid;
-  acctWipeCloud(u, invite).then(function () {
+  acctWipeCloud(u, invite).then(function (counts) {
+    if (counts && counts.reactions) showToast("واکنش‌های تو روی " + toFa(counts.reactions) + " پست پاک شد");
     return u.delete();
   }).catch(function (e) {
     if (e && e.code === "auth/requires-recent-login") {
@@ -5876,10 +5972,17 @@ function acctDeleteRun() {
     acctClearArchive(uid);
     if (typeof syncDisable === "function") {
       // کلید و تنظیمات همگام‌سازی این دستگاه هم پاک شود
-      try { window.localStorage.removeItem(SYNC_CFG_KEY); window.localStorage.removeItem(SYNC_PRE_KEY); } catch (e) {}
+      try {
+        window.localStorage.removeItem(SYNC_CFG_KEY);
+        window.localStorage.removeItem(SYNC_PRE_KEY);
+        window.localStorage.removeItem(SYNC_META_KEY);
+        window.localStorage.removeItem(MYROOMS_KEY);
+      } catch (e) {}
       clearInterval(SYNC.pollT); SYNC.pollT = null;
-      syncKeyDel(); SYNC.key = null; SYNC.cfg = null;
+      clearTimeout(SYNC.retryT); SYNC.retryT = null;
+      syncKeyDel(); SYNC.key = null; SYNC.cfg = null; SYNC.meta = null;
     }
+    mirrorClear();
     state = sanitize({});
     saveState();
     ACCOUNT.user = null;
@@ -6187,6 +6290,7 @@ function cloudCreateChallenge() {
   room.s[CLOUD.uid] = cloudDayScore();
   CLOUD.db.collection("rooms").doc(id).set(room).then(function () {
     CLOUD.rooms[id] = room;
+    myRoomTrack(id, room.exp);
     renderCloud();
     var link = "https://shzdoni.github.io/karhaye-roozane/?c=" + id;
     var txt = "⚔️ چالش دونفره! بیا رقابت کنیم:\n" + link;
@@ -6228,6 +6332,7 @@ function cloudLeaveChallenge(id) {
   var p = isHost ? roomRef.delete() : roomRef.update({ g: null, gnn: "", gav: "" });
   p.then(function () {
     delete CLOUD.rooms[id];
+    if (isHost) myRoomUntrack(id);
     renderCloud();
     showToast(isHost ? "اتاق حذف شد 🗑" : "از چالش خارج شدی 👋");
   }).catch(function () { showToast("عملیات ناموفق بود — اینترنت را بررسی کن ❌"); });
@@ -6240,6 +6345,53 @@ function cloudHandleParam() {
     var code = q.get("f").toUpperCase();
     if (/^[A-Z2-9]{6}$/.test(code) && $("cloudCodeIn")) { $("cloudCodeIn").value = code; setTimeout(function () { cloudAddFriendByCode(); }, 1200); }
   }
+}
+
+// اتاق‌های من برای پاک‌سازی بعدی (اتاق منقضی در لیست Rules دیده نمی‌شود، پس شناسه را نگه می‌داریم)
+var MYROOMS_KEY = "dailyTasksMyRooms_v1";
+function myRoomsLoad() {
+  var m = {};
+  try { m = JSON.parse(window.localStorage.getItem(MYROOMS_KEY) || "{}"); } catch (e) { m = {}; }
+  return (m && typeof m === "object") ? m : {};
+}
+function myRoomsSave(m) {
+  try { window.localStorage.setItem(MYROOMS_KEY, JSON.stringify(m)); } catch (e) {}
+}
+function myRoomTrack(id, exp) {
+  var m = myRoomsLoad();
+  m[id] = Number(exp) || 0;
+  var ids = Object.keys(m);
+  if (ids.length > 60) {
+    ids.sort(function (a, b) { return (m[a] || 0) - (m[b] || 0); });
+    for (var i = 0; i < ids.length - 60; i++) delete m[ids[i]];
+  }
+  myRoomsSave(m);
+}
+function myRoomUntrack(id) {
+  var m = myRoomsLoad();
+  if (m[id] !== undefined) { delete m[id]; myRoomsSave(m); }
+}
+// پاک‌سازی اتاق‌های منقضیِ خودم + اتاق‌های قدیمی بدون exp (بدون دست‌زدن به اتاق فعال)
+function cloudCleanupRooms() {
+  if (!CLOUD.ok || !CLOUD.uid) return;
+  var m = myRoomsLoad(), now = Date.now(), changed = false;
+  for (var id in m) {
+    var exp = Number(m[id]) || 0;
+    if (!exp || exp > now) continue;
+    delete m[id]; changed = true;
+    CLOUD.db.collection("rooms").doc(id).delete().catch(function () {});
+    delete CLOUD.rooms[id];
+  }
+  if (changed) myRoomsSave(m);
+  // نسخه‌های قدیمی بدون exp: فقط اگر بیش از ۸ روز از ساختشان گذشته باشد
+  CLOUD.db.collection("rooms").where("h", "==", CLOUD.uid).limit(50).get().then(function (qs) {
+    qs.docs.forEach(function (d) {
+      var r = d.data() || {};
+      if (typeof r.exp === "number") return;
+      var t = typeof r.t === "number" ? r.t : 0;
+      if (t > 0 && now - t > 8 * 86400000) d.ref.delete().catch(function () {});
+    });
+  }).catch(function () {});
 }
 
 function cloudStartPoll() {
@@ -6647,7 +6799,7 @@ function renderCloud() {
 
 var BACKUP_APP = "karhaye-roozane";
 var BACKUP_VER = 2;
-var APP_VER = "3.5.0";
+var APP_VER = "3.6.0";
 var pendingImport = null;
 var importTries = 0;
 
@@ -6764,15 +6916,60 @@ function cloudBackupDown() {
   });
 }
 
-/* ==================# همگام‌سازی رمزدار چنددستگاهی (آزمایشی) #================== */
+/* ==================# همگام‌سازی رمزدار چنددستگاهی (ادغام‌محور) #================== */
 var SYNC_CFG_KEY = "dailyTasksSync_v1";
 var SYNC_PRE_KEY = "dailyTasksPreSync_v1";
-var SYNC = { cfg: null, key: null, busy: false, pushT: null, pollT: null, conflict: null, note: "" };
+var SYNC_META_KEY = "dailyTasksSyncMeta_v2";
+var SYNC = { cfg: null, key: null, busy: false, pushT: null, pollT: null, conflict: null, note: "", meta: null, retryT: null };
+
+// آرایه‌هایی که ادغام اجتماع آیتم‌ها را دارند (شناسه‌ی عددی/متنی) + سنگ‌قبر حذف
+var SYNC_ARR_KEYS = { tasks: 1, birthdays: 1, brain: 1, reminders: 1, goals: 1, letters: 1, friends: 1, challenges: 1, ledger: 1 };
 
 function syncHash(s) {
   var h = 2166136261;
   for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = (h * 16777619) >>> 0; }
   return h.toString(36) + ":" + s.length.toString(36);
+}
+function syncClone(o) { return JSON.parse(JSON.stringify(o)); }
+function syncHas(o, k) { return !!o && Object.prototype.hasOwnProperty.call(o, k); }
+function syncItemId(it) {
+  if (!it || typeof it !== "object") return null;
+  if (typeof it.id === "number") return String(it.id);
+  if (typeof it.id === "string" && it.id) return it.id;
+  return null;
+}
+function syncUnitIds(v) {
+  var out = {}, i, sid;
+  if (Array.isArray(v)) {
+    for (i = 0; i < v.length; i++) { sid = syncItemId(v[i]); if (sid !== null) out[sid] = 1; }
+    return out;
+  }
+  if (v && typeof v === "object") {
+    for (sid in v) if (Object.prototype.hasOwnProperty.call(v, sid)) out[sid] = 1;
+    return out;
+  }
+  return null;
+}
+
+// شناسه‌ی هر آیتم + زمان آخرین تغییر محتوایش؛ برای اینکه سنگ‌قبر فقط آیتم تغییری‌نکرده را حذف کند
+function syncUnitMeta(v, prev) {
+  var out = {}, i, sid, raw, h, p;
+  function put(item, sid) {
+    try { raw = JSON.stringify(item); } catch (e) { raw = ""; }
+    h = syncHash(typeof raw === "string" ? raw : String(raw));
+    p = prev && prev[sid];
+    var pt = Number(p && (p.t !== undefined ? p.t : p)) || 0;
+    out[sid] = { t: (p && p.h === h && pt > 0) ? pt : Date.now(), h: h };
+  }
+  if (Array.isArray(v)) {
+    for (i = 0; i < v.length; i++) { sid = syncItemId(v[i]); if (sid !== null) put(v[i], sid); }
+    return out;
+  }
+  if (v && typeof v === "object") {
+    for (sid in v) if (Object.prototype.hasOwnProperty.call(v, sid)) put(v[sid], sid);
+    return out;
+  }
+  return null;
 }
 
 function syncLoadCfg() {
@@ -6785,6 +6982,186 @@ function syncSaveCfg() {
     if (SYNC.cfg) window.localStorage.setItem(SYNC_CFG_KEY, JSON.stringify(SYNC.cfg));
     else window.localStorage.removeItem(SYNC_CFG_KEY);
   } catch (e) {}
+}
+
+function syncMetaLoad() {
+  var m = null;
+  try { m = JSON.parse(window.localStorage.getItem(SYNC_META_KEY) || "null"); } catch (e) {}
+  if (!m || typeof m !== "object" || m.v !== 2) m = { v: 2, kt: {}, kh: {}, ids: {}, td: {} };
+  if (!m.kt || typeof m.kt !== "object") m.kt = {};
+  if (!m.kh || typeof m.kh !== "object") m.kh = {};
+  if (!m.ids || typeof m.ids !== "object") m.ids = {};
+  if (!m.td || typeof m.td !== "object") m.td = {};
+  SYNC.meta = m;
+  return m;
+}
+function syncMetaSave() {
+  if (!SYNC.meta) return;
+  try { window.localStorage.setItem(SYNC_META_KEY, JSON.stringify(SYNC.meta)); } catch (e) {}
+}
+// محاسبه‌ی «کدام کلید از کِی تغییر کرده» + سنگ‌قبر آیتم‌های حذف‌شده (برای انتشار حذف به دستگاه دیگر)
+function syncMetaTrack() {
+  if (!SYNC.meta) syncMetaLoad();
+  var m = SYNC.meta, now = Date.now(), changed = false, k;
+  for (k in state) {
+    if (!Object.prototype.hasOwnProperty.call(state, k)) continue;
+    var raw;
+    try { raw = JSON.stringify(state[k]); } catch (e) { raw = ""; }
+    if (typeof raw !== "string") raw = String(raw);
+    var h = syncHash(raw);
+    if (m.kh[k] === h) continue;
+    m.kt[k] = now; m.kh[k] = h; changed = true;
+    var ids = syncUnitMeta(state[k], m.ids[k]);
+    if (ids) {
+      var oldIds = m.ids[k] || {};
+      var td = m.td[k] || (m.td[k] = {});
+      for (var oid in oldIds) if (!ids[oid]) td[oid] = now;
+      for (var nid in ids) if (td[nid]) delete td[nid];
+      m.ids[k] = ids;
+      if (!Object.keys(td).length) delete m.td[k];
+    }
+  }
+  for (k in m.kh) {
+    if (!Object.prototype.hasOwnProperty.call(m.kh, k)) continue;
+    if (!Object.prototype.hasOwnProperty.call(state, k)) { m.kt[k] = now; m.kh[k] = "missing"; changed = true; }
+  }
+  var cutoff = now - 90 * 86400000;
+  for (k in m.td) {
+    var bucket = m.td[k];
+    if (!bucket || typeof bucket !== "object") { delete m.td[k]; continue; }
+    for (var tid in bucket) if (!(Number(bucket[tid]) >= cutoff)) delete bucket[tid];
+    if (!Object.keys(bucket).length) delete m.td[k];
+  }
+  if (changed) syncMetaSave();
+  return m;
+}
+// پس از ادغام: اثر انگشت کلیدها بدون تغییر زمان‌ها (تا ادغام بعدی دوباره‌شماری نشود)
+function syncMetaSnap(st) {
+  var m = SYNC.meta || syncMetaLoad(), k;
+  for (k in st) {
+    if (!Object.prototype.hasOwnProperty.call(st, k)) continue;
+    var raw;
+    try { raw = JSON.stringify(st[k]); } catch (e) { raw = ""; }
+    if (typeof raw !== "string") raw = String(raw);
+    m.kh[k] = syncHash(raw);
+    var ids = syncUnitMeta(st[k], m.ids[k]);
+    if (ids) m.ids[k] = ids;
+  }
+}
+
+// حذف سنگ‌قبرِ آیتم‌هایی که در حالت نهایی وجود دارند (احیای آگاهانه)
+function syncPruneTd(st) {
+  var m = SYNC.meta;
+  if (!m || !m.td) return;
+  var k, id, ids;
+  for (k in m.td) {
+    if (!Object.prototype.hasOwnProperty.call(m.td, k)) continue;
+    ids = syncUnitIds(st[k]);
+    if (ids) for (id in ids) if (m.td[k] && m.td[k][id]) delete m.td[k][id];
+    if (m.td[k] && !Object.keys(m.td[k]).length) delete m.td[k];
+  }
+}
+
+// ادغام دوفیلدی: عددی‌های پیشرفت (XP/سکه) بیشتر برنده؛ کلیدهای دیگر جدیدترین زمان؛ آیتم‌ها اجتماع با سنگ‌قبر
+function syncMergeStates(local, lmt, cloud, cmt, ltd, ctd) {
+  var out = {}, notes = { added: 0, deleted: 0, localOnly: 0, cloudOnly: 0, overlap: 0 };
+  var keys = {}, k;
+  for (k in local) if (Object.prototype.hasOwnProperty.call(local, k)) keys[k] = 1;
+  for (k in cloud) if (Object.prototype.hasOwnProperty.call(cloud, k)) keys[k] = 1;
+  for (k in keys) {
+    if (k === "__proto__" || k === "constructor" || k === "prototype") continue;
+    var lHas = syncHas(local, k) && local[k] !== undefined;
+    var cHas = syncHas(cloud, k) && cloud[k] !== undefined;
+    var lt = Number(lmt && lmt[k]) || 0;
+    var ct = Number(cmt && cmt[k]) || 0;
+    if (SYNC_ARR_KEYS[k] && Array.isArray(local[k] || cloud[k])) {
+      out[k] = syncMergeArr(k, lHas ? local[k] : [], cHas ? cloud[k] : [], lt, ct, ltd, ctd, notes, lmt, cmt);
+      continue;
+    }
+    if (lHas && cHas) {
+      var lv = local[k], cv = cloud[k];
+      if (JSON.stringify(lv) === JSON.stringify(cv)) { out[k] = syncClone(lv); continue; }
+      if (k === "xp" || k === "coins") { out[k] = Math.max(Number(lv) || 0, Number(cv) || 0); continue; }
+      if (lt > 0 && ct > 0) {
+        notes.overlap++;
+        if (syncIsMap(lv) && syncIsMap(cv)) out[k] = syncMergeMap(lv, cv, ct, lt, 0, syncTombFor(k, ltd, ctd), notes);
+        else out[k] = (ct > lt) ? syncClone(cv) : syncClone(lv);
+        if (ct > lt) notes.cloudOnly++; else notes.localOnly++;
+      } else if (ct > 0) { out[k] = syncClone(cv); notes.cloudOnly++; }
+      else { out[k] = syncClone(lv); notes.localOnly++; }
+    } else if (cHas) { out[k] = syncClone(cloud[k]); notes.added++; }
+    else if (lHas) { out[k] = syncClone(local[k]); }
+  }
+  return { state: out, notes: notes };
+}
+
+function syncTombFor(k, ltd, ctd) {
+  var tomb = {}, id;
+  var ta = (ltd && ltd[k]) || {}, tb = (ctd && ctd[k]) || {};
+  for (id in ta) tomb[id] = Math.max(tomb[id] || 0, Number(ta[id]) || 0);
+  for (id in tb) tomb[id] = Math.max(tomb[id] || 0, Number(tb[id]) || 0);
+  return tomb;
+}
+
+function syncMergeArr(k, lArr, cArr, lt, ct, ltd, ctd, notes, lmt, cmt) {
+  var tomb = syncTombFor(k, ltd, ctd), id;
+  // سنگ‌قبر فقط آیتمی را حذف می‌کند که بعد از زمان حذف تغییر نکرده باشد (ویرایش دیرهنگام احیا می‌شود)
+  function tombKills(sid) {
+    var ts = Number(tomb[sid]) || 0;
+    if (!ts) return false;
+    var sideTs = function (mt) {
+      var bucket = mt && mt.ids && mt.ids[k];
+      var p = bucket && bucket[sid];
+      return Number(p && p.t !== undefined ? p.t : p) || 0;
+    };
+    var last = Math.max(sideTs(lmt), sideTs(cmt));
+    return !(last > ts);
+  }
+  var out = [], seen = {}, i, it, sid;
+  for (i = 0; i < lArr.length; i++) {
+    it = lArr[i];
+    sid = syncItemId(it);
+    if (sid === null) { out.push(syncClone(it)); continue; }
+    if (tombKills(sid)) { notes.deleted++; continue; }
+    seen[sid] = out.length;
+    out.push(syncClone(it));
+  }
+  for (i = 0; i < cArr.length; i++) {
+    it = cArr[i];
+    sid = syncItemId(it);
+    if (sid === null) continue;
+    if (tombKills(sid)) { if (!syncHas(seen, sid)) notes.deleted++; continue; }
+    if (syncHas(seen, sid)) {
+      var at = seen[sid];
+      if (ct > lt && JSON.stringify(out[at]) !== JSON.stringify(it)) out[at] = syncClone(it);
+    } else {
+      seen[sid] = out.length;
+      out.push(syncClone(it));
+      notes.added++;
+    }
+  }
+  return out;
+}
+
+function syncIsMap(v) { return !!v && typeof v === "object" && !Array.isArray(v); }
+// ادغام نقشه‌ها (تاریخچه/یادداشت/حال/پومودورو/…) تا تغییرات مختلف دو دستگاه هم بمانند
+function syncMergeMap(lv, cv, ct, lt, depth, tomb, notes) {
+  if (!syncIsMap(lv) || !syncIsMap(cv)) return (ct > lt) ? syncClone(cv) : syncClone(lv);
+  var out = {}, k;
+  for (k in lv) {
+    if (!Object.prototype.hasOwnProperty.call(lv, k)) continue;
+    if (depth === 0 && syncHas(tomb, k)) { if (notes) notes.deleted++; continue; }
+    out[k] = syncClone(lv[k]);
+  }
+  for (k in cv) {
+    if (!Object.prototype.hasOwnProperty.call(cv, k)) continue;
+    if (depth === 0 && syncHas(tomb, k)) continue;
+    if (!syncHas(out, k)) { out[k] = syncClone(cv[k]); if (notes) notes.added++; continue; }
+    if (JSON.stringify(out[k]) === JSON.stringify(cv[k])) continue;
+    if (depth < 3 && syncIsMap(out[k]) && syncIsMap(cv[k])) out[k] = syncMergeMap(out[k], cv[k], ct, lt, depth + 1, null, notes);
+    else if (ct > lt) out[k] = syncClone(cv[k]);
+  }
+  return out;
 }
 
 var syncDbP = null;
@@ -6829,11 +7206,11 @@ function syncRender(note) {
   box.textContent = "";
   var head = document.createElement("h2");
   head.className = "section-title";
-  head.textContent = "🔄 همگام‌سازی رمزدار دستگاه‌ها (آزمایشی)";
+  head.textContent = "🔄 همگام‌سازی رمزدار دستگاه‌ها";
   box.appendChild(head);
   var hint = document.createElement("p");
   hint.className = "card-hint";
-  hint.textContent = "کارها، تنظیمات، یادداشت و وضعیت گربه با رمز خودت رمز می‌شوند؛ فقط متن رمزشده در ابر می‌ماند و کلید فقط روی همین دستگاه ذخیره می‌شود.";
+  hint.textContent = "کارها، تنظیمات، یادداشت و وضعیت گربه با رمز خودت رمز می‌شوند؛ فقط متن رمزشده در ابر می‌ماند و کلید فقط روی همین دستگاه ذخیره می‌شود. تغییرات دو دستگاه ادغام می‌شوند و حذف‌ها هم منتقل می‌شوند.";
   box.appendChild(hint);
   var u = CLOUD.auth && CLOUD.auth.currentUser;
   if (!CLOUD.ok || !u || u.isAnonymous) {
@@ -6862,13 +7239,13 @@ function syncRender(note) {
   var st = document.createElement("p");
   st.className = "card-hint";
   st.style.margin = "0 0 6px";
-  st.textContent = "نسخه ابری: " + toFa(SYNC.cfg.lastRev || 0) + " • " + (SYNC.note || "آماده");
+  st.textContent = "نسخه ابری: " + toFa(SYNC.cfg.lastRev || 0) + " • " + (SYNC.cfg.pending ? "در انتظار ارسال (وقتی اینترنت بود خودکار می‌رود)…" : (SYNC.note || "آماده"));
   box.appendChild(st);
   var b1 = document.createElement("button");
   b1.type = "button"; b1.className = "footer-btn"; b1.textContent = "⤴️ ارسال الان";
   b1.addEventListener("click", function () { syncPush(true); });
   var b2 = document.createElement("button");
-  b2.type = "button"; b2.className = "footer-btn"; b2.textContent = "⬇️ دریافت";
+  b2.type = "button"; b2.className = "footer-btn"; b2.textContent = "⬇️ دریافت و ادغام";
   b2.addEventListener("click", function () { syncCheck(true); });
   var b3 = document.createElement("button");
   b3.type = "button"; b3.className = "footer-btn"; b3.textContent = "⛔ خاموش";
@@ -6879,7 +7256,7 @@ function syncRender(note) {
     var warn = document.createElement("p");
     warn.className = "card-hint";
     warn.style.color = "#f59e0b";
-    warn.textContent = "⚠️ دستگاه دیگری نسخه جدیدتری فرستاده. یکی را انتخاب کن:";
+    warn.textContent = "⚠️ دستگاه دیگری نسخه جدیدتری فرستاده (نسخه‌ی قبلیِ بدون ادغام). یکی را انتخاب کن:";
     box.appendChild(warn);
     var row2 = document.createElement("div");
     row2.className = "cloud-row";
@@ -6903,15 +7280,30 @@ function syncEnable() {
   if ((pin || "").length < 6) { showToast("رمز حداقل ۶ کاراکتر باشد ❌"); return; }
   var pin2 = window.prompt("رمز را دوباره وارد کن:", "");
   if (pin2 !== pin) { showToast("رمزها یکسان نیستند ❌"); return; }
-  var salt = crypto.getRandomValues(new Uint8Array(16));
   showToast("در حال راه‌اندازی همگام‌سازی… ⏳");
-  deriveKey(pin, salt).then(function (k) {
-    return syncKeyPut(k).then(function () { return k; });
-  }).then(function (k) {
-    SYNC.key = k;
-    SYNC.cfg = { on: true, salt: b2b64(salt), dv: "d" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), lastRev: 0, lastHash: null, t: 0 };
+  // اگر نسخه ابری از قبل هست، نمک همان نسخه را برمی‌داریم تا کلید با دستگاه دوم یکی شود
+  var ref = CLOUD.db.collection("sync").doc(CLOUD.uid);
+  ref.get().then(function (d) {
+    var cloudSalt = null;
+    if (d.exists) {
+      var blob = (d.data() || {}).blob;
+      if (typeof blob === "string" && blob.indexOf(LOCK_PREFIX) === 0) {
+        var parts = blob.slice(LOCK_PREFIX.length).split("|");
+        if (parts.length === 3 && parts[0]) { try { cloudSalt = b642buf(parts[0]); } catch (e) { cloudSalt = null; } }
+      }
+    }
+    return cloudSalt;
+  }).catch(function () { return null; }).then(function (cloudSalt) {
+    var salt = (cloudSalt && cloudSalt.length >= 16) ? cloudSalt : crypto.getRandomValues(new Uint8Array(16));
+    return deriveKey(pin, salt).then(function (k) {
+      return syncKeyPut(k).then(function () { return { k: k, salt: salt }; });
+    });
+  }).then(function (r) {
+    SYNC.key = r.k;
+    SYNC.cfg = { on: true, salt: b2b64(r.salt), dv: "d" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), lastRev: 0, lastHash: null, t: 0, pending: false };
     syncSaveCfg();
-    return syncCheck(false).then(function (had) { if (!had) return syncPush(true); });
+    // چک اولیه با حالت manual: حتی اگر تب الان مخفی باشد، نسخه ابری باید قبل از هر ارسال بررسی شود
+    return syncCheck(true).then(function (had) { if (!had) return syncPush(true); });
   }).then(function () {
     syncStartPoll();
     syncRender("راه‌اندازی شد");
@@ -6925,6 +7317,7 @@ function syncDisable() {
   if (SYNC.cfg) { SYNC.cfg.on = false; syncSaveCfg(); }
   clearInterval(SYNC.pollT); SYNC.pollT = null;
   clearTimeout(SYNC.pushT); SYNC.pushT = null;
+  clearTimeout(SYNC.retryT); SYNC.retryT = null;
   syncKeyDel();
   SYNC.key = null; SYNC.conflict = null;
   syncRender("خاموش شد");
@@ -6937,23 +7330,63 @@ function syncSoon() {
   SYNC.pushT = setTimeout(function () { syncPush(false); }, 15000);
 }
 
+function syncDecryptBlob(blob) {
+  if (typeof blob !== "string" || blob.indexOf(LOCK_PREFIX) !== 0) return Promise.reject(new Error("bad"));
+  var parts = blob.slice(LOCK_PREFIX.length).split("|");
+  if (parts.length !== 3) return Promise.reject(new Error("bad"));
+  return syncEnsureKey().then(function (k) {
+    return crypto.subtle.decrypt({ name: "AES-GCM", iv: b642buf(parts[1]) }, k, b642buf(parts[2]));
+  }).then(function (pt) { return JSON.parse(new TextDecoder().decode(pt)); });
+}
+
+function syncMarkPending(on) {
+  if (!SYNC.cfg) return;
+  SYNC.cfg.pending = !!on;
+  syncSaveCfg();
+  clearTimeout(SYNC.retryT);
+  if (on) {
+    SYNC.retryT = setTimeout(function () {
+      if (!SYNC.cfg || !SYNC.cfg.on || !SYNC.cfg.pending) return;
+      if (navigator.onLine === false) return;
+      syncPush(true);
+    }, 60000);
+  }
+}
+
 function syncPush(force) {
   if (!SYNC.cfg || !SYNC.cfg.on || !CLOUD.ok || !CLOUD.uid || SYNC.busy) return Promise.resolve(false);
   var u = CLOUD.auth && CLOUD.auth.currentUser;
   if (!u || u.isAnonymous) return Promise.resolve(false);
+  if (lockState.key || lockState.locked) return Promise.resolve(false);
   if (document.visibilityState === "hidden" && !force) return Promise.resolve(false);
-  var raw = JSON.stringify(state);
-  var h = syncHash(raw);
+  syncMetaTrack();
+  var env = { v: 2, st: state, mt: SYNC.meta.kt, td: SYNC.meta.td, dv: SYNC.cfg.dv, at: Date.now() };
+  var raw = JSON.stringify(env);
+  var h = syncHash(JSON.stringify(state));
   if (!force && h === SYNC.cfg.lastHash) return Promise.resolve(false);
   if (raw.length + 200 > 850000) { syncRender("داده برای همگام‌سازی بزرگ است"); return Promise.resolve(false); }
-  SYNC.busy = true;
   var ref = CLOUD.db.collection("sync").doc(CLOUD.uid);
-  return syncEnsureKey().then(function (k) {
+  // قبل از بازنویسی نسخه ابری: اگر نسخه ابری جلوتر است اول ادغام کن تا تغییرات دستگاه دیگر از دست نرود
+  var pre = (force && (SYNC.cfg.lastRev || 0) > 0)
+    ? ref.get().then(function (d) {
+        if (d.exists && Number(d.data().rev) > (SYNC.cfg.lastRev || 0)) return syncCheck(true).then(function () { return false; });
+        return true;
+      }).catch(function () { return true; })
+    : Promise.resolve(true);
+  return pre.then(function (can) {
+    if (!can) return false;
+    SYNC.busy = true;
+    return syncEnsureKey().then(function (k) {
     return encryptText(k, b642buf(SYNC.cfg.salt), raw);
   }).then(function (blob) {
     return CLOUD.db.runTransaction(function (tx) {
       return tx.get(ref).then(function (d) {
         var cur = (d.exists && typeof d.data().rev === "number") ? d.data().rev : 0;
+        var oldBlob = d.exists ? d.data().blob : null;
+        if (typeof oldBlob === "string" && oldBlob.indexOf(LOCK_PREFIX) === 0) {
+          var p = oldBlob.slice(LOCK_PREFIX.length).split("|");
+          if (p.length === 3 && p[0] !== SYNC.cfg.salt) throw { code: "sync/salt" };
+        }
         if (!force && cur > (SYNC.cfg.lastRev || 0)) throw { code: "sync/stale" };
         tx.set(ref, { blob: blob, rev: cur + 1, t: Date.now(), dv: SYNC.cfg.dv }, { merge: true });
         return cur + 1;
@@ -6961,55 +7394,132 @@ function syncPush(force) {
     });
   }).then(function (rev) {
     SYNC.cfg.lastRev = rev; SYNC.cfg.lastHash = h; SYNC.cfg.t = Date.now();
-    syncSaveCfg();
+    syncMarkPending(false);
     syncRender("ارسال شد");
     return true;
   }).catch(function (e) {
     if (e && e.code === "sync/stale") { syncRender("نسخه ابری جدیدتر است"); syncCheck(false); }
-    else syncRender("ارسال ناموفق");
+    else if (e && e.code === "sync/salt") {
+      syncRender("کلید این دستگاه با نسخه ابری هم‌خوان نیست — همگام‌سازی را خاموش و با رمز نسخه ابری دوباره روشن کن");
+      showToast("کلید همگام‌سازی با نسخه ابری نمی‌خواند ❌");
+    }
+    else { syncMarkPending(true); syncRender("ارسال ناموفق — دوباره تلاش می‌شود"); }
     return false;
   }).then(function (v) { SYNC.busy = false; return v; }, function (e) { SYNC.busy = false; throw e; });
+  });
 }
 
-function syncApplyDoc(doc) {
-  if (!doc || typeof doc.blob !== "string") return Promise.reject(new Error("bad"));
+// جایگزینی کامل با نسخه ابری (انتخاب آگاهانه‌ی کاربر در تعارض نسخه‌های قدیمی یا دکمه‌ی اعمال)
+function syncApplyCloudDoc(doc, payload) {
   if (lockState.key) { showToast("اول قفل رمز را بردار 🔒"); return Promise.reject(new Error("locked")); }
-  var parts = doc.blob.slice(LOCK_PREFIX.length).split("|");
-  if (parts.length !== 3) return Promise.reject(new Error("bad"));
+  var incoming;
+  if (payload && payload.v === 2 && payload.st && typeof payload.st === "object") incoming = sanitize(payload.st);
+  else incoming = sanitize(payload || {});
+  if (!incoming || typeof incoming !== "object") return Promise.reject(new Error("bad"));
+  try { window.localStorage.setItem(SYNC_PRE_KEY, JSON.stringify(state)); } catch (e) {}
+  state = incoming;
+  if (!state.tz) state.tz = browserTz();
+  acctAfterLocalReplace();
+  ensureCat(); ensureProfile(); ensureMissions();
+  snapshotDay();
+  saveState();
+  renderAll();
+  renderProfile();
+  renderCloud();
+  renderBackupInfo();
+  switchTab(state.tab || "home");
+  var t = (payload && payload.v === 2 && payload.mt) ? payload.mt : null;
+  SYNC.meta = { v: 2, kt: {}, kh: {}, ids: {}, td: (payload && payload.v === 2 && payload.td) ? syncClone(payload.td) : {} };
+  var fallbackT = Number(doc && doc.t) || Date.now();
+  var k;
+  for (k in state) SYNC.meta.kt[k] = Number(t && t[k]) || fallbackT;
+  syncMetaSnap(state);
+  syncPruneTd(state);
+  syncMetaSave();
+  SYNC.cfg.lastRev = (doc && doc.rev) || 0;
+  SYNC.cfg.lastHash = syncHash(JSON.stringify(state));
+  syncSaveCfg();
+  SYNC.conflict = null;
+  syncRender("نسخه ابری اعمال شد");
+  try { cloudPush(true); } catch (e) {}
+  showToast("همگام‌سازی شد ✅");
+  return Promise.resolve(true);
+}
+
+// ادغام نسخه ابری با داده محلی؛ قبل از هر تغییر نسخه‌ی محلی در SYNC_PRE_KEY نگه داشته می‌شود
+function syncMergeApply(env, doc, localClean) {
+  if (lockState.key) { showToast("اول قفل رمز را بردار 🔒"); return Promise.reject(new Error("locked")); }
+  if (SYNC.busy) return Promise.resolve(false);
   SYNC.busy = true;
-  return syncEnsureKey().then(function (k) {
-    return crypto.subtle.decrypt({ name: "AES-GCM", iv: b642buf(parts[1]) }, k, b642buf(parts[2]));
-  }).then(function (pt) {
-    var incoming = JSON.parse(new TextDecoder().decode(pt));
-    if (!isUsableBackupData(incoming)) throw new Error("bad");
-    incoming = sanitize(incoming);
-    // قبل از جایگزینی، یک نسخه محلی نگه می‌داریم تا هیچ چیزی گم نشود
-    try { window.localStorage.setItem(SYNC_PRE_KEY, JSON.stringify(state)); } catch (e) {}
-    state = incoming;
-    if (!state.tz) state.tz = browserTz();
-    acctAfterLocalReplace();
-    ensureCat(); ensureProfile(); ensureMissions();
-    snapshotDay();
-    saveState();
-    renderAll();
-    renderProfile();
-    renderCloud();
-    renderBackupInfo();
-    switchTab(state.tab || "home");
-    SYNC.cfg.lastRev = doc.rev || 0;
+  try {
+    syncMetaTrack();
+    var cloudState = sanitize(env.st || {});
+    var cloudMt = (env.mt && typeof env.mt === "object") ? env.mt : {};
+    var cloudTd = (env.td && typeof env.td === "object") ? env.td : {};
+    var lmt = SYNC.meta.kt || {}, ltd = SYNC.meta.td || {};
+    var res = syncMergeStates(state, lmt, cloudState, cloudMt, ltd, cloudTd);
+    var merged = sanitize(res.state);
+    var changed = JSON.stringify(merged) !== JSON.stringify(state);
+    var mergedMt = {}, mergedTd = {}, k, id;
+    for (k in lmt) mergedMt[k] = Number(lmt[k]) || 0;
+    for (k in cloudMt) if (!(k in mergedMt) || (Number(cloudMt[k]) || 0) > mergedMt[k]) mergedMt[k] = Number(cloudMt[k]) || 0;
+    for (k in ltd) mergedTd[k] = syncClone(ltd[k]);
+    for (k in cloudTd) {
+      if (!mergedTd[k]) { mergedTd[k] = syncClone(cloudTd[k]); continue; }
+      for (id in cloudTd[k]) if (!(id in mergedTd[k]) || Number(cloudTd[k][id]) > Number(mergedTd[k][id] || 0)) mergedTd[k][id] = Number(cloudTd[k][id]) || 0;
+    }
+    if (changed) {
+      try { window.localStorage.setItem(SYNC_PRE_KEY, JSON.stringify(state)); } catch (e) {}
+      state = merged;
+      if (!state.tz) state.tz = browserTz();
+      acctAfterLocalReplace();
+      ensureCat(); ensureProfile(); ensureMissions();
+      snapshotDay();
+      saveState();
+      renderAll();
+      renderProfile();
+      renderCloud();
+      renderBackupInfo();
+      switchTab(state.tab || "home");
+    }
+    SYNC.meta = { v: 2, kt: mergedMt, kh: {}, ids: {}, td: mergedTd };
+    syncMetaSnap(state);
+    syncPruneTd(state);
+    syncMetaSave();
+    SYNC.cfg.lastRev = (doc && doc.rev) || 0;
     SYNC.cfg.lastHash = syncHash(JSON.stringify(state));
     syncSaveCfg();
     SYNC.conflict = null;
-    syncRender("از دستگاه دیگر اعمال شد");
-    cloudPush(true);
-    showToast("همگام‌سازی شد ✅");
-    return true;
-  }).then(function (v) { SYNC.busy = false; return v; }, function (e) { SYNC.busy = false; throw e; });
+    syncRender(changed ? "ادغام شد — تغییرات دستگاه دیگر اعمال شد" : "همگام و به‌روز");
+    var moved = (res.notes.added || 0) + (res.notes.deleted || 0);
+    if (moved) showToast("ادغام انجام شد ✅ (" + toFa(moved) + " مورد از دستگاه دیگر)");
+    else if (changed) showToast("همگام‌سازی شد ✅");
+    if (changed) { try { cloudPush(true); } catch (e) {} }
+    SYNC.busy = false;
+    if (!localClean) setTimeout(function () { syncPush(true); }, 80);
+    return Promise.resolve(true);
+  } catch (e) {
+    SYNC.busy = false;
+    return Promise.reject(e);
+  }
+}
+
+function syncStateEmpty(st) {
+  st = st || state;
+  if (!st || typeof st !== "object") return true;
+  return !(st.tasks || []).length
+    && !Object.keys(st.history || {}).length
+    && !(st.birthdays || []).length
+    && !(st.letters || []).length
+    && !(st.reminders || []).length
+    && !Object.keys(st.notes || {}).length
+    && !Object.keys(st.badges || {}).length;
 }
 
 function syncCheck(manual) {
   if (!SYNC.cfg || !SYNC.cfg.on || !CLOUD.ok || !CLOUD.uid) return Promise.resolve(false);
   if (SYNC.busy) return Promise.resolve(false);
+  if (lockState.key || lockState.locked) return Promise.resolve(false);
   if (document.visibilityState === "hidden" && !manual) return Promise.resolve(false);
   var ref = CLOUD.db.collection("sync").doc(CLOUD.uid);
   return ref.get().then(function (d) {
@@ -7019,18 +7529,35 @@ function syncCheck(manual) {
     }
     var doc = d.data() || {};
     var rrev = typeof doc.rev === "number" ? doc.rev : 0;
-    if (rrev <= (SYNC.cfg.lastRev || 0)) {
+    // اگر داده محلی از دست رفته باشد حتی با rev برابر هم از ابر بازیابی می‌کنیم
+    var localEmpty = syncStateEmpty();
+    if (rrev <= (SYNC.cfg.lastRev || 0) && !localEmpty) {
       if (manual) showToast("همین حالا همگام است ✅");
       return false;
     }
-    var localHash = syncHash(JSON.stringify(state));
-    if (localHash !== (SYNC.cfg.lastHash || "")) {
-      SYNC.conflict = { doc: doc };
-      syncRender("نسخه ابری جدیدتر است — انتخاب کن");
-      if (manual) showToast("نسخه ابری جدیدتر است؛ یکی از دو گزینه را انتخاب کن ⚠️");
-      return true;
+    var blobParts = typeof doc.blob === "string" ? doc.blob.slice(LOCK_PREFIX.length).split("|") : [];
+    if (blobParts.length === 3 && blobParts[0] !== SYNC.cfg.salt) {
+      syncRender("کلید این دستگاه با نسخه ابری هم‌خوان نیست — همگام‌سازی را خاموش و با رمز نسخه ابری دوباره روشن کن");
+      if (manual) showToast("کلید این دستگاه با نسخه ابری هم‌خوان نیست ❌");
+      return false;
     }
-    return syncApplyDoc(doc).then(function () { return true; });
+    if (!SYNC.meta) syncMetaLoad();
+    if (SYNC.cfg.lastHash) syncMetaTrack(); // فقط وقتی قبلاً همگام شده‌ایم معنی دارد
+    var localClean = syncHash(JSON.stringify(state)) === (SYNC.cfg.lastHash || "");
+    return syncDecryptBlob(doc.blob).then(function (payload) {
+      if (payload && payload.v === 2 && payload.st && typeof payload.st === "object") {
+        // داده محلی از دست رفته: جایگزینی کامل با ابر (ادغام با داده خالی فقط سنگ‌قبرهای کهنه را اعمال می‌کند)
+        if (localEmpty && !syncStateEmpty(payload.st)) return syncApplyCloudDoc(doc, payload);
+        return syncMergeApply(payload, doc, localClean);
+      }
+      if (!localClean) {
+        SYNC.conflict = { doc: doc };
+        syncRender("نسخه ابری جدیدتر است — انتخاب کن");
+        if (manual) showToast("نسخه ابری جدیدتر است؛ یکی از دو گزینه را انتخاب کن ⚠️");
+        return true;
+      }
+      return syncApplyCloudDoc(doc, payload);
+    }).then(function () { return true; });
   }).catch(function () {
     syncRender("دریافت ناموفق");
     if (manual) showToast("دریافت ناموفق ❌");
@@ -7041,19 +7568,34 @@ function syncCheck(manual) {
 function syncResolveCloud() {
   if (!SYNC.conflict) return;
   if (!window.confirm("داده‌های فعلی این دستگاه با نسخه ابری جایگزین شود؟ یک نسخه از داده فعلی به‌صورت محلی نگه داشته می‌شود.")) return;
-  syncApplyDoc(SYNC.conflict.doc).catch(function () { showToast("اعمال نسخه ابری ناموفق بود ❌"); });
+  var doc = SYNC.conflict.doc;
+  SYNC.busy = true;
+  syncDecryptBlob(doc.blob).then(function (payload) {
+    SYNC.busy = false;
+    return syncApplyCloudDoc(doc, payload);
+  }).catch(function () { SYNC.busy = false; showToast("اعمال نسخه ابری ناموفق بود ❌"); });
 }
 
 function syncStartPoll() {
   clearInterval(SYNC.pollT);
   SYNC.pollT = setInterval(function () {
     if (document.visibilityState === "hidden") return;
+    if (SYNC.cfg && SYNC.cfg.pending) { syncPush(true); return; }
     syncCheck(false);
   }, 120000);
 }
 
+window.addEventListener("online", function () {
+  if (!SYNC.cfg || !SYNC.cfg.on) return;
+  setTimeout(function () {
+    syncCheck(false);
+    if (SYNC.cfg && SYNC.cfg.pending) syncPush(true);
+  }, 1500);
+});
+
 function syncBoot() {
   syncLoadCfg();
+  syncMetaLoad();
   syncRender();
   if (!SYNC.cfg || !SYNC.cfg.on) return;
   syncEnsureKey().catch(function () {
@@ -7061,7 +7603,9 @@ function syncBoot() {
     syncRender("کلید روی این دستگاه نیست — دوباره روشن کن");
   });
   syncStartPoll();
-  setTimeout(function () { syncCheck(false); }, 4000);
+  // اگر داده‌ی محلی خالی باشد (مثلاً پس از پاک‌شدن حافظه) حتی در تب مخفی هم از ابر بازیابی می‌کنیم
+  setTimeout(function () { syncCheck(syncStateEmpty()); }, 4000);
+  if (SYNC.cfg.pending) setTimeout(function () { syncPush(true); }, 7000);
 }
 
 function backupAgeLabel(ts) {
