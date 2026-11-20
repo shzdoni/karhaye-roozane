@@ -669,6 +669,9 @@
   #impPin { width: 100%; border: 2px solid var(--border); border-radius: 10px; padding: 10px; text-align: center; direction: ltr; letter-spacing: 4px; font-size: 1.05rem; font-family: inherit; box-sizing: border-box; outline: none; }
   #impPin:focus { border-color: var(--primary); }
   #impErr { color: var(--danger); font-size: .8rem; min-height: 1.1em; margin-top: 6px; }
+  /* مودال رمز امن (جای window.prompt) */
+  #pwdOk { background: var(--primary); color: #fff; }
+  #pwdInput, #pwdInput2 { direction: ltr; text-align: left; }
 
   /* حساب کاربری */
   .acct-badge { font-size: .64rem; background: #f1f5f9; color: var(--muted); border-radius: 999px; padding: 2px 8px; vertical-align: middle; }
@@ -1138,6 +1141,20 @@
         <button type="button" id="impUnlock" style="display:none">🔓 باز کن</button>
         <button type="button" id="impMerge">✅ ادغام کن</button>
         <button type="button" id="impReplace">♻️ جایگزینی کامل</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="pwdModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="pwdTitle">
+    <div class="modal-box">
+      <h3 id="pwdTitle">رمز</h3>
+      <p class="imp-note" id="pwdNote"></p>
+      <input type="password" id="pwdInput" class="acct-in" dir="ltr" maxlength="128" autocomplete="new-password" placeholder="رمز (حداقل ۶ کاراکتر)">
+      <input type="password" id="pwdInput2" class="acct-in" dir="ltr" maxlength="128" autocomplete="new-password" placeholder="تکرار رمز" style="display:none;margin-top:6px">
+      <p class="acct-msg" id="pwdErr"></p>
+      <div class="modal-actions">
+        <button type="button" id="pwdCancel">انصراف</button>
+        <button type="button" id="pwdOk">تأیید</button>
       </div>
     </div>
   </div>
@@ -5443,7 +5460,7 @@ function switchTab(tab) {
 
 /* ==================# ☁️ لایه ابری (Firebase) #================== */
 
-var CLOUD = { ok: false, inited: false, uid: null, me: null, friends: {}, lb: "day", pushT: null, rooms: {}, feed: [], pollT: null, warned: false, lastPush: null };
+var CLOUD = { ok: false, inited: false, uid: null, me: null, friends: {}, lb: "day", pushT: null, rooms: {}, feed: [], pollT: null, feedT: null, warned: false, lastPush: null };
 
 var CLOUD_CFG = { apiKey: "AIzaSyBOehoq13MT296i41UMbd0d39hnQHwZ6FI", authDomain: "karhaye-roozane.firebaseapp.com", projectId: "karhaye-roozane", appId: "1:388429335273:web:162787fc71faf67b703e78" };
 
@@ -5495,6 +5512,7 @@ function cloudInit() {
     if (!u) {
       CLOUD.ok = false; CLOUD.uid = null; CLOUD.me = null; CLOUD.lastPush = null;
       if (CLOUD.pollT) { clearInterval(CLOUD.pollT); CLOUD.pollT = null; }
+    if (CLOUD.feedT) { clearInterval(CLOUD.feedT); CLOUD.feedT = null; }
       ACCOUNT.user = null;
       renderAccount();
       // بعد از خروج، به‌صورت مهمان (ناشناس) دوباره وصل شو تا باشگاه از کار نیفتد
@@ -5579,6 +5597,19 @@ function acctLoadArchive(uid) {
 
 function acctClearArchive(uid) {
   try { window.localStorage.removeItem(acctArchiveKey(uid)); } catch (e) {}
+}
+
+// نگه‌داشتن حداکثر ۳ نسخه‌ی نجات تا localStorage شلوغ نشود
+function acctPruneRescues() {
+  try {
+    var keys = [];
+    for (var i = 0; i < window.localStorage.length; i++) {
+      var k = window.localStorage.key(i);
+      if (k && k.indexOf(STORAGE_KEY + "::rescue:") === 0) keys.push(k);
+    }
+    keys.sort();
+    while (keys.length > 3) { window.localStorage.removeItem(keys.shift()); }
+  } catch (e) {}
 }
 
 function acctIsEmptyish(st) {
@@ -5711,6 +5742,7 @@ function acctOnAuth(u) {
   if (archived) {
     if (!acctIsEmptyish(state)) {
       try { window.localStorage.setItem(STORAGE_KEY + "::rescue:" + Date.now(), JSON.stringify(state)); } catch (e) {}
+      acctPruneRescues();
     }
     state = sanitize(archived);
     showToast("داده‌های قبلی این حساب روی این دستگاه بازگردانی شد ♻️");
@@ -5842,6 +5874,7 @@ function acctSignOut() {
   acctArchive(uid);
   CLOUD.ok = false; CLOUD.uid = null; CLOUD.me = null;
   if (CLOUD.pollT) { clearInterval(CLOUD.pollT); CLOUD.pollT = null; }
+    if (CLOUD.feedT) { clearInterval(CLOUD.feedT); CLOUD.feedT = null; }
   clearTimeout(CLOUD.pushT);
   state = sanitize({});
   saveState();
@@ -5883,17 +5916,22 @@ function acctCloseDelete() {
   $("acctMCancel").disabled = false;
 }
 
+// صفحه‌بندی با مکان‌نمای documentId: بعد از حذف/به‌روزرسانی، همان صفحه‌ی اول دوباره خوانده نمی‌شود
+// (رفع حلقه‌ی بی‌نهایت وقتی یک دوست ۵۰ پست یا بیشتر دارد و فقط آپدیت می‌شوند)
 function acctEachQuery(q, fn, size) {
   var n = 0;
-  function step() {
-    return q.limit(size || 50).get().then(function (qs) {
+  function step(last) {
+    var qq = q.orderBy(firebase.firestore.FieldPath.documentId());
+    if (last) qq = qq.startAfter(last);
+    return qq.limit(size || 50).get().then(function (qs) {
       if (!qs.size) return n;
+      var lastDoc = qs.docs[qs.docs.length - 1];
       return Promise.all(qs.docs.map(function (d) {
         return fn(d).then(function () { n++; });
-      })).then(function () { return qs.size < (size || 50) ? n : step(); });
+      })).then(function () { return qs.size < (size || 50) ? n : step(lastDoc); });
     });
   }
-  return step();
+  return step(null);
 }
 
 function acctDeleteQuery(q, size) {
@@ -5923,6 +5961,7 @@ function acctCleanMyReactions(db, uid) {
 function acctWipeCloud(u, invite) {
   CLOUD.ok = false; CLOUD.me = null;
   if (CLOUD.pollT) { clearInterval(CLOUD.pollT); CLOUD.pollT = null; }
+    if (CLOUD.feedT) { clearInterval(CLOUD.feedT); CLOUD.feedT = null; }
   clearTimeout(CLOUD.pushT);
   var db = CLOUD.db;
   var failed = 0;
@@ -6362,12 +6401,31 @@ function cloudLeaveChallenge(id) {
   }).catch(function () { showToast("عملیات ناموفق بود — اینترنت را بررسی کن ❌"); });
 }
 
+// پارامترهای لینک فقط یک‌بار در هر بارگذاری صفحه پردازش می‌شوند و بعد از خواندن از URL پاک می‌شوند
+// تا اتصال‌های مجدد ابری، دوباره همان confirm را باز نکنند.
+var cloudParamHandled = false;
+
 function cloudHandleParam() {
+  if (cloudParamHandled) return;
   var q = new URLSearchParams(location.search);
-  if (q.get("c")) { cloudJoinChallenge(q.get("c")); switchTab("club"); }
-  if (q.get("f")) {
-    var code = q.get("f").toUpperCase();
-    if (/^[A-Z2-9]{6}$/.test(code) && $("cloudCodeIn")) { $("cloudCodeIn").value = code; setTimeout(function () { cloudAddFriendByCode(); }, 1200); }
+  var rid = q.get("c"), fcode = q.get("f");
+  if (!rid && !fcode) return;
+  cloudParamHandled = true;
+  try { history.replaceState(null, "", location.pathname); } catch (e) {}
+  // امنیت: هیچ عملیاتی از لینک به‌صورت خودکار انجام نمی‌شود
+  if (rid) {
+    if (/^[A-Za-z0-9]{4,64}$/.test(rid) && window.confirm("این لینک یک چالش دونفره است — به چالش بپیوندی؟")) {
+      cloudJoinChallenge(rid);
+      switchTab("club");
+    }
+  }
+  if (fcode) {
+    var code = fcode.toUpperCase();
+    if (/^[A-Z2-9]{6}$/.test(code) && $("cloudCodeIn")) {
+      $("cloudCodeIn").value = code;
+      switchTab("club");
+      showToast("کد دعوت از لینک وارد شد — دکمه‌ی «➕ افزودن» را خودت بزن ✅");
+    }
   }
 }
 
@@ -6433,8 +6491,14 @@ function cloudStartPoll() {
         }).catch(function () {});
       })(id);
     }
-    cloudLoadFriendsFeed();
   }, 20000);
+  // فید هر ۲ دقیقه تازه می‌شود (صرفه‌جویی جدی در سهمیه خواندن)؛ بعد از هر واکنش/حذف/پست هم فوراً
+  clearInterval(CLOUD.feedT);
+  CLOUD.feedT = setInterval(function () {
+    if (!CLOUD.ok || !CLOUD.me) return;
+    if (document.visibilityState === "hidden") return;
+    cloudLoadFriendsFeed();
+  }, 120000);
 }
 
 // فید
@@ -6819,11 +6883,59 @@ function renderCloud() {
 
 /* ==================# پشتیبان‌گیری #================== */
 
+/* ==================# 🔑 مودال رمز امن (جای window.prompt) #================== */
+// رمزها با مودال و فیلد مخفی گرفته می‌شوند: نه روی صفحه نمایش داده می‌شوند، نه به prompt مرورگر
+// وابسته‌اند (که در بعضی مرورگرها/WebViewها غیرفعال می‌شود).
+var pwdResolve = null;
+
+function askPassword(title, note, withConfirm) {
+  return new Promise(function (resolve) {
+    pwdResolve = resolve;
+    $("pwdTitle").textContent = title;
+    $("pwdNote").textContent = note || "";
+    $("pwdInput").value = "";
+    $("pwdInput2").value = "";
+    $("pwdInput2").style.display = withConfirm ? "block" : "none";
+    $("pwdErr").textContent = "";
+    $("pwdErr").className = "acct-msg";
+    $("pwdModal").style.display = "flex";
+    setTimeout(function () { try { $("pwdInput").focus(); } catch (e) {} }, 60);
+  });
+}
+
+function pwdClose(val) {
+  $("pwdModal").style.display = "none";
+  var r = pwdResolve; pwdResolve = null;
+  if (r) r(val);
+}
+
+function pwdSubmit() {
+  var p1 = $("pwdInput").value || "";
+  var need2 = $("pwdInput2").style.display !== "none";
+  if (p1.length < 6) {
+    $("pwdErr").textContent = "رمز حداقل ۶ کاراکتر باشد ❌";
+    $("pwdErr").className = "acct-msg";
+    return;
+  }
+  if (need2 && ($("pwdInput2").value || "") !== p1) {
+    $("pwdErr").textContent = "رمزها یکسان نیستند ❌";
+    $("pwdErr").className = "acct-msg";
+    return;
+  }
+  pwdClose(p1);
+}
+
+$("pwdOk").addEventListener("click", pwdSubmit);
+$("pwdCancel").addEventListener("click", function () { pwdClose(null); });
+$("pwdInput").addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); pwdSubmit(); } });
+$("pwdInput2").addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); pwdSubmit(); } });
+$("pwdModal").addEventListener("click", function (e) { if (e.target === $("pwdModal")) pwdClose(null); });
+
 /* ==================# 💾 پشتیبان حرفه‌ای #================== */
 
 var BACKUP_APP = "karhaye-roozane";
 var BACKUP_VER = 2;
-var APP_VER = "3.6.1";
+var APP_VER = "3.6.2";
 var pendingImport = null;
 var importTries = 0;
 
@@ -6875,28 +6987,26 @@ function cloudBackupUp() {
   if (!CLOUD.ok || !CLOUD.db || !CLOUD.uid) { showToast("اول آنلاین/وارد حساب شو ☁️"); return; }
   var u = CLOUD.auth && CLOUD.auth.currentUser;
   if (!u || u.isAnonymous) { showToast("برای پشتیبان ابری اول با ایمیل یا گوگل وارد شو 🔐"); return; }
-  var pin = window.prompt("رمز پشتیبان ابری (حداقل ۶ کاراکتر) — همین رمز را برای بازیابی لازم داری:", "");
-  if (pin === null) return;
-  if ((pin || "").length < 6) { showToast("رمز حداقل ۶ کاراکتر باشد ❌"); return; }
-  var pin2 = window.prompt("رمز را دوباره وارد کن:", "");
-  if (pin2 !== pin) { showToast("رمزها یکسان نیستند ❌"); return; }
-  var salt = crypto.getRandomValues(new Uint8Array(16));
-  showToast("در حال رمزگذاری و آپلود… ⏳");
-  deriveKey(pin, salt).then(function (k) {
-    return encryptText(k, salt, JSON.stringify(state));
-  }).then(function (blob) {
-    if (blob.length > 850000) throw { code: "backup/too-large" };
-    return CLOUD.db.collection("backups").doc(CLOUD.uid).set({
-      blob: blob,
-      t: Date.now(),
-      v: 1,
-      tz: state.tz || browserTz()
+  askPassword("رمز پشتیبان ابری رمزدار", "همین رمز را هنگام بازیابی لازم داری؛ اگر فراموشش کنی بازیابی ممکن نیست. کلید هرگز آپلود نمی‌شود.", true).then(function (pin) {
+    if (pin === null) return;
+    var salt = crypto.getRandomValues(new Uint8Array(16));
+    showToast("در حال رمزگذاری و آپلود… ⏳");
+    return deriveKey(pin, salt).then(function (k) {
+      return encryptText(k, salt, JSON.stringify(state));
+    }).then(function (blob) {
+      if (blob.length > 850000) throw { code: "backup/too-large" };
+      return CLOUD.db.collection("backups").doc(CLOUD.uid).set({
+        blob: blob,
+        t: Date.now(),
+        v: 1,
+        tz: state.tz || browserTz()
+      });
+    }).then(function () {
+      showToast("پشتیبان ابری رمزدار ذخیره شد ☁️🔐");
+    }).catch(function (e) {
+      if (e && e.code === "backup/too-large") showToast("حجم داده برای پشتیبان ابری زیاد است؛ از پشتیبان فایل استفاده کن ❌");
+      else showToast("پشتیبان ابری ناموفق بود — اینترنت/دسترسی را بررسی کن ❌");
     });
-  }).then(function () {
-    showToast("پشتیبان ابری رمزدار ذخیره شد ☁️🔐");
-  }).catch(function (e) {
-    if (e && e.code === "backup/too-large") showToast("حجم داده برای پشتیبان ابری زیاد است؛ از پشتیبان فایل استفاده کن ❌");
-    else showToast("پشتیبان ابری ناموفق بود — اینترنت/دسترسی را بررسی کن ❌");
   });
 }
 
@@ -6909,31 +7019,32 @@ function cloudBackupDown() {
     var doc = d.data() || {};
     var blob = doc.blob;
     if (typeof blob !== "string" || blob.indexOf(LOCK_PREFIX) !== 0) { showToast("پشتیبان ابری خراب است ❌"); return; }
-    var pin = window.prompt("رمز پشتیبان ابری را وارد کن:", "");
-    if (pin === null) return;
     var parts = blob.slice(LOCK_PREFIX.length).split("|");
     if (parts.length !== 3) { showToast("پشتیبان ابری خراب است ❌"); return; }
-    return deriveKey(pin, b642buf(parts[0])).then(function (k) {
-      return crypto.subtle.decrypt({ name: "AES-GCM", iv: b642buf(parts[1]) }, k, b642buf(parts[2]));
-    }).then(function (pt) {
-      var incoming = JSON.parse(new TextDecoder().decode(pt));
-      if (!isUsableBackupData(incoming)) throw new Error("bad");
-      incoming = sanitize(incoming);
-      if (!window.confirm("داده‌های فعلی این دستگاه با پشتیبان ابری جایگزین شود؟ (فایل پشتیبان محلی جداگانه بگیر)")) return;
-      state = incoming;
-      if (!state.tz) state.tz = browserTz();
-      acctAfterLocalReplace();
-      ensureCat(); ensureProfile(); ensureMissions();
-      snapshotDay();
-      saveState();
-      renderAll();
-      renderProfile();
-      renderBackupInfo();
-      switchTab(state.tab || "home");
-      cloudPush(true);
-      showToast("از پشتیبان ابری بازیابی شد ✅");
-    }).catch(function () {
-      showToast("رمز اشتباه یا پشتیبان آسیب‌دیده ❌");
+    return askPassword("بازیابی از پشتیبان ابری", "رمزی که هنگام گرفتن پشتیبان ابری گذاشتی را وارد کن.", false).then(function (pin) {
+      if (pin === null) return;
+      return deriveKey(pin, b642buf(parts[0])).then(function (k) {
+        return crypto.subtle.decrypt({ name: "AES-GCM", iv: b642buf(parts[1]) }, k, b642buf(parts[2]));
+      }).then(function (pt) {
+        var incoming = JSON.parse(new TextDecoder().decode(pt));
+        if (!isUsableBackupData(incoming)) throw new Error("bad");
+        incoming = sanitize(incoming);
+        if (!window.confirm("داده‌های فعلی این دستگاه با پشتیبان ابری جایگزین شود؟ (فایل پشتیبان محلی جداگانه بگیر)")) return;
+        state = incoming;
+        if (!state.tz) state.tz = browserTz();
+        acctAfterLocalReplace();
+        ensureCat(); ensureProfile(); ensureMissions();
+        snapshotDay();
+        saveState();
+        renderAll();
+        renderProfile();
+        renderBackupInfo();
+        switchTab(state.tab || "home");
+        cloudPush(true);
+        showToast("از پشتیبان ابری بازیابی شد ✅");
+      }).catch(function () {
+        showToast("رمز اشتباه یا پشتیبان آسیب‌دیده ❌");
+      });
     });
   }).catch(function () {
     showToast("دریافت پشتیبان ابری ناموفق بود ❌");
@@ -7174,11 +7285,13 @@ function syncMergeMap(lv, cv, ct, lt, depth, tomb, notes) {
   var out = {}, k;
   for (k in lv) {
     if (!Object.prototype.hasOwnProperty.call(lv, k)) continue;
+    if (k === "__proto__" || k === "constructor" || k === "prototype") continue;
     if (depth === 0 && syncHas(tomb, k)) { if (notes) notes.deleted++; continue; }
     out[k] = syncClone(lv[k]);
   }
   for (k in cv) {
     if (!Object.prototype.hasOwnProperty.call(cv, k)) continue;
+    if (k === "__proto__" || k === "constructor" || k === "prototype") continue;
     if (depth === 0 && syncHas(tomb, k)) continue;
     if (!syncHas(out, k)) { out[k] = syncClone(cv[k]); if (notes) notes.added++; continue; }
     if (JSON.stringify(out[k]) === JSON.stringify(cv[k])) continue;
@@ -7309,40 +7422,38 @@ function syncEnable() {
   var u = CLOUD.auth && CLOUD.auth.currentUser;
   if (!CLOUD.ok || !u || u.isAnonymous) { showToast("برای همگام‌سازی اول با ایمیل/گوگل وارد شو 🔐"); return; }
   if (lockState.key) { showToast("اول قفل رمز را بردار 🔒"); return; }
-  var pin = window.prompt("رمز همگام‌سازی (حداقل ۶ کاراکتر) — همین رمز را روی دستگاه دوم هم لازم داری:", "");
-  if (pin === null) return;
-  if ((pin || "").length < 6) { showToast("رمز حداقل ۶ کاراکتر باشد ❌"); return; }
-  var pin2 = window.prompt("رمز را دوباره وارد کن:", "");
-  if (pin2 !== pin) { showToast("رمزها یکسان نیستند ❌"); return; }
-  showToast("در حال راه‌اندازی همگام‌سازی… ⏳");
-  // اگر نسخه ابری از قبل هست، نمک همان نسخه را برمی‌داریم تا کلید با دستگاه دوم یکی شود
-  var ref = CLOUD.db.collection("sync").doc(CLOUD.uid);
-  ref.get().then(function (d) {
-    var cloudSalt = null;
-    if (d.exists) {
-      var blob = (d.data() || {}).blob;
-      if (typeof blob === "string" && blob.indexOf(LOCK_PREFIX) === 0) {
-        var parts = blob.slice(LOCK_PREFIX.length).split("|");
-        if (parts.length === 3 && parts[0]) { try { cloudSalt = b642buf(parts[0]); } catch (e) { cloudSalt = null; } }
+  askPassword("رمز همگام‌سازی رمزدار", "همین رمز را روی دستگاه دوم هم لازم داری. کلید فقط روی همین دستگاه ذخیره می‌شود و به سرور نمی‌رود.", true).then(function (pin) {
+    if (pin === null) return;
+    showToast("در حال راه‌اندازی همگام‌سازی… ⏳");
+    // اگر نسخه ابری از قبل هست، نمک همان نسخه را برمی‌داریم تا کلید با دستگاه دوم یکی شود
+    var ref = CLOUD.db.collection("sync").doc(CLOUD.uid);
+    ref.get().then(function (d) {
+      var cloudSalt = null;
+      if (d.exists) {
+        var blob = (d.data() || {}).blob;
+        if (typeof blob === "string" && blob.indexOf(LOCK_PREFIX) === 0) {
+          var parts = blob.slice(LOCK_PREFIX.length).split("|");
+          if (parts.length === 3 && parts[0]) { try { cloudSalt = b642buf(parts[0]); } catch (e) { cloudSalt = null; } }
+        }
       }
-    }
-    return cloudSalt;
-  }).catch(function () { return null; }).then(function (cloudSalt) {
-    var salt = (cloudSalt && cloudSalt.length >= 16) ? cloudSalt : crypto.getRandomValues(new Uint8Array(16));
-    return deriveKey(pin, salt).then(function (k) {
-      return syncKeyPut(k).then(function () { return { k: k, salt: salt }; });
-    });
-  }).then(function (r) {
-    SYNC.key = r.k;
-    SYNC.cfg = { on: true, salt: b2b64(r.salt), dv: "d" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), lastRev: 0, lastHash: null, t: 0, pending: false };
-    syncSaveCfg();
-    // چک اولیه با حالت manual: حتی اگر تب الان مخفی باشد، نسخه ابری باید قبل از هر ارسال بررسی شود
-    return syncCheck(true).then(function (had) { if (!had) return syncPush(true); });
-  }).then(function () {
-    syncStartPoll();
-    syncRender("راه‌اندازی شد");
-    showToast("همگام‌سازی روشن شد ✅");
-  }).catch(function () { showToast("راه‌اندازی همگام‌سازی ناموفق بود ❌"); });
+      return cloudSalt;
+    }).catch(function () { return null; }).then(function (cloudSalt) {
+      var salt = (cloudSalt && cloudSalt.length >= 16) ? cloudSalt : crypto.getRandomValues(new Uint8Array(16));
+      return deriveKey(pin, salt).then(function (k) {
+        return syncKeyPut(k).then(function () { return { k: k, salt: salt }; });
+      });
+    }).then(function (r) {
+      SYNC.key = r.k;
+      SYNC.cfg = { on: true, salt: b2b64(r.salt), dv: "d" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), lastRev: 0, lastHash: null, t: 0, pending: false };
+      syncSaveCfg();
+      // چک اولیه با حالت manual: حتی اگر تب الان مخفی باشد، نسخه ابری باید قبل از هر ارسال بررسی شود
+      return syncCheck(true).then(function (had) { if (!had) return syncPush(true); });
+    }).then(function () {
+      syncStartPoll();
+      syncRender("راه‌اندازی شد");
+      showToast("همگام‌سازی روشن شد ✅");
+    }).catch(function () { showToast("راه‌اندازی همگام‌سازی ناموفق بود ❌"); });
+  });
 }
 
 function syncDisable() {
@@ -7541,13 +7652,29 @@ function syncMergeApply(env, doc, localClean) {
 function syncStateEmpty(st) {
   st = st || state;
   if (!st || typeof st !== "object") return true;
-  return !(st.tasks || []).length
-    && !Object.keys(st.history || {}).length
-    && !(st.birthdays || []).length
-    && !(st.letters || []).length
-    && !(st.reminders || []).length
-    && !Object.keys(st.notes || {}).length
-    && !Object.keys(st.badges || {}).length;
+  function k(o) { return Object.keys(o || {}).length; }
+  function a(v) { return (v || []).length; }
+  return !a(st.tasks)
+    && !k(st.history)
+    && !a(st.birthdays)
+    && !a(st.letters)
+    && !a(st.reminders)
+    && !a(st.brain)
+    && !a(st.goals)
+    && !a(st.challenges)
+    && !a(st.friends)
+    && !k(st.notes)
+    && !k(st.badges)
+    && !k(st.moods)
+    && !k(st.gratitude)
+    && !k(st.pomos)
+    && !k(st.daySnap)
+    && !k(st.journals)
+    && !k(st.trackers && st.trackers.water)
+    && !k(st.trackers && st.trackers.book)
+    && !k(st.trackers && st.trackers.sleep)
+    && !((st.xp || 0) > 0)
+    && !((st.coins || 0) > 0);
 }
 
 function syncCheck(manual) {
@@ -7897,10 +8024,20 @@ function tryImportPin() {
   });
 }
 
+// سقف‌های تعداد برای مقاوم‌سازی در برابر داده‌ی حجیم/دست‌کاری‌شده؛ برای کاربر واقعی به‌اندازه‌ی کافی بزرگ‌اند.
+// کلیدهای روزِ اضافه: تازه‌ترین‌ها نگه داشته می‌شوند (کلید ISO تاریخ = ترتیب زمانی).
+function capDayKeys(o, cap) {
+  var ks = Object.keys(o || {});
+  if (ks.length <= cap) return ks;
+  ks.sort();
+  return ks.slice(ks.length - cap);
+}
+
 function sanitize(s) {
   var clean = { tasks: [], history: {}, birthdays: [] };
   if (Array.isArray(s.tasks)) {
     for (var i = 0; i < s.tasks.length; i++) {
+      if (clean.tasks.length >= 1000) break;
       var t = s.tasks[i];
       if (t && typeof t.id === "number" && typeof t.title === "string" && t.title.trim() && typeof t.createdAt === "number") {
         var due = (typeof t.due === "string" && /^\d{4}-\d{2}-\d{2}$/.test(t.due)) ? t.due : null;
@@ -7912,16 +8049,20 @@ function sanitize(s) {
     }
   }
   if (s.history && typeof s.history === "object") {
-    for (var key in s.history) {
+    var hKeys = capDayKeys(s.history, 2000);
+    for (var hi = 0; hi < hKeys.length; hi++) {
+      var key = hKeys[hi];
       if (s.history[key] && typeof s.history[key] === "object") {
-        var day = {};
-        for (var id in s.history[key]) if (s.history[key][id] === true) day[id] = true;
+        var day = {}, dayN = 0;
+        for (var id in s.history[key]) {
+          if (s.history[key][id] === true && dayN < 500) { day[id] = true; dayN++; }
+        }
         if (Object.keys(day).length) clean.history[key] = day;
       }
     }
   }
   if (Array.isArray(s.birthdays)) {
-    for (var bi = 0; bi < s.birthdays.length; bi++) {
+    for (var bi = 0; bi < s.birthdays.length && bi < 200; bi++) {
       var b = s.birthdays[bi];
       if (b && typeof b.name === "string" && b.name.trim() && typeof b.id === "number" &&
           typeof b.y === "number" && typeof b.m === "number" && typeof b.d === "number") {
@@ -7938,7 +8079,7 @@ function sanitize(s) {
   // 🎯 هدف‌های هفتگی
   clean.goals = [];
   if (Array.isArray(s.goals)) {
-    for (var gi = 0; gi < s.goals.length; gi++) {
+    for (var gi = 0; gi < s.goals.length && gi < 100; gi++) {
       var g = s.goals[gi];
       if (g && typeof g.id === "number" && typeof g.taskId === "number" && typeof g.target === "number" && g.target >= 1 && g.target <= 70) {
         clean.goals.push({ id: g.id, taskId: g.taskId, target: g.target });
@@ -7948,7 +8089,9 @@ function sanitize(s) {
   // 🍅 پومودوروهای روزانه
   clean.pomos = {};
   if (s.pomos && typeof s.pomos === "object") {
-    for (var pk in s.pomos) {
+    var pkKeys = capDayKeys(s.pomos, 2000);
+    for (var pki = 0; pki < pkKeys.length; pki++) {
+      var pk = pkKeys[pki];
       if (/^\d{4}-\d{2}-\d{2}$/.test(pk) && typeof s.pomos[pk] === "number" && s.pomos[pk] > 0 && s.pomos[pk] <= 99) {
         clean.pomos[pk] = s.pomos[pk];
       }
@@ -7958,7 +8101,7 @@ function sanitize(s) {
   clean.reminders = [];
   if (Array.isArray(s.reminders)) {
     var repOk = { once: 1, daily: 1, weekly: 1, yearly: 1 };
-    for (var ri = 0; ri < s.reminders.length; ri++) {
+    for (var ri = 0; ri < s.reminders.length && ri < 200; ri++) {
       var rem = s.reminders[ri];
       if (rem && typeof rem.id === "number" && typeof rem.text === "string" && rem.text.trim() &&
           typeof rem.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(rem.date) && repOk[rem.rep]) {
@@ -7973,7 +8116,7 @@ function sanitize(s) {
   // 🧠 ذهن‌خالی
   clean.brain = [];
   if (Array.isArray(s.brain)) {
-    for (var ci = 0; ci < s.brain.length; ci++) {
+    for (var ci = 0; ci < s.brain.length && ci < 300; ci++) {
       var c = s.brain[ci];
       if (c && typeof c.id === "number" && typeof c.text === "string" && c.text.trim() && typeof c.createdAt === "number" && c.text.length <= 200) {
         clean.brain.push({ id: c.id, text: c.text.trim(), createdAt: c.createdAt });
@@ -7983,7 +8126,9 @@ function sanitize(s) {
   // 📝 یادداشت‌ها
   clean.notes = {};
   if (s.notes && typeof s.notes === "object") {
-    for (var nk in s.notes) {
+    var nkKeys = capDayKeys(s.notes, 2000);
+    for (var nki = 0; nki < nkKeys.length; nki++) {
+      var nk = nkKeys[nki];
       if (/^\d{4}-\d{2}-\d{2}$/.test(nk) && typeof s.notes[nk] === "string" && s.notes[nk].length <= 2000) {
         clean.notes[nk] = s.notes[nk];
       }
@@ -7992,14 +8137,18 @@ function sanitize(s) {
   // 🌡️ حالِ روزها
   clean.moods = {};
   if (s.moods && typeof s.moods === "object") {
-    for (var mk in s.moods) {
+    var mkKeys = capDayKeys(s.moods, 2000);
+    for (var mki = 0; mki < mkKeys.length; mki++) {
+      var mk = mkKeys[mki];
       if (/^\d{4}-\d{2}-\d{2}$/.test(mk) && [1, 2, 3, 4].indexOf(s.moods[mk]) !== -1) clean.moods[mk] = s.moods[mk];
     }
   }
   // 🙏 شکرگزاری‌ها
   clean.gratitude = {};
   if (s.gratitude && typeof s.gratitude === "object") {
-    for (var gk in s.gratitude) {
+    var gkKeys = capDayKeys(s.gratitude, 2000);
+    for (var gki = 0; gki < gkKeys.length; gki++) {
+      var gk = gkKeys[gki];
       if (!/^\d{4}-\d{2}-\d{2}$/.test(gk) || !Array.isArray(s.gratitude[gk])) continue;
       var gitems = s.gratitude[gk].filter(function (x) { return typeof x === "string" && x.trim() && x.length <= 80; }).slice(0, 3);
       if (gitems.length) clean.gratitude[gk] = gitems;
@@ -8015,7 +8164,7 @@ function sanitize(s) {
   // 💌 نامه‌ها
   clean.letters = [];
   if (Array.isArray(s.letters)) {
-    for (var li = 0; li < s.letters.length; li++) {
+    for (var li = 0; li < s.letters.length && li < 300; li++) {
       var L = s.letters[li];
       if (L && typeof L.id === "number" && typeof L.text === "string" && L.text.trim() && L.text.length <= 1000 &&
           typeof L.createdAt === "number" && typeof L.openAt === "string" && /^\d{4}-\d{2}-\d{2}$/.test(L.openAt)) {
@@ -8026,7 +8175,7 @@ function sanitize(s) {
   // 🏃 چالش‌ها
   clean.challenges = [];
   if (Array.isArray(s.challenges)) {
-    for (var chi = 0; chi < s.challenges.length; chi++) {
+    for (var chi = 0; chi < s.challenges.length && chi < 50; chi++) {
       var ch = s.challenges[chi];
       if (ch && typeof ch.id === "number" && typeof ch.taskId === "number" && typeof ch.startKey === "string" && /^\d{4}-\d{2}-\d{2}$/.test(ch.startKey)) {
         clean.challenges.push({ id: ch.id, taskId: ch.taskId, startKey: ch.startKey });
@@ -8041,7 +8190,9 @@ function sanitize(s) {
     for (var ti = 0; ti < tkIds.length; ti++) {
       var tkey = tkIds[ti];
       if (s.trackers[tkey] && typeof s.trackers[tkey] === "object") {
-        for (var tk in s.trackers[tkey]) {
+        var tkKeys = capDayKeys(s.trackers[tkey], 2000);
+        for (var tki = 0; tki < tkKeys.length; tki++) {
+          var tk = tkKeys[tki];
           var tv = s.trackers[tkey][tk];
           if (/^\d{4}-\d{2}-\d{2}$/.test(tk) && typeof tv === "number" && tv > 0 && tv <= tkCaps[tkey] && tv === Math.round(tv)) {
             clean.trackers[tkey][tk] = tv;
@@ -8053,10 +8204,14 @@ function sanitize(s) {
   // 📓 دفترچه‌ی عادت‌ها
   clean.journals = {};
   if (s.journals && typeof s.journals === "object") {
-    for (var jk in s.journals) {
+    var jkKeys = Object.keys(s.journals).slice(0, 1000);
+    for (var jki = 0; jki < jkKeys.length; jki++) {
+      var jk = jkKeys[jki];
       if (!/^\d+$/.test(jk) || !s.journals[jk] || typeof s.journals[jk] !== "object") continue;
       var jday = {};
-      for (var jdk in s.journals[jk]) {
+      var jdkKeys = capDayKeys(s.journals[jk], 400);
+      for (var jdki = 0; jdki < jdkKeys.length; jdki++) {
+        var jdk = jdkKeys[jdki];
         if (/^\d{4}-\d{2}-\d{2}$/.test(jdk) && typeof s.journals[jk][jdk] === "string" && s.journals[jk][jdk].trim() && s.journals[jk][jdk].length <= 500) {
           jday[jdk] = s.journals[jk][jdk];
         }
@@ -8067,7 +8222,7 @@ function sanitize(s) {
   // 🏁 دوست‌های رقابت
   clean.friends = [];
   if (Array.isArray(s.friends)) {
-    for (var fi = 0; fi < s.friends.length; fi++) {
+    for (var fi = 0; fi < s.friends.length && fi < 500; fi++) {
       var fr = s.friends[fi];
       if (fr && typeof fr.id === "number" && typeof fr.n === "string" && fr.n.trim() && fr.n.length <= 30 &&
           typeof fr.w === "number" && fr.w >= 0 && fr.w <= 9999 && typeof fr.s === "number" && fr.s >= 0 && fr.s <= 999) {
@@ -8089,7 +8244,9 @@ function sanitize(s) {
       if (s.games.wins && typeof s.games.wins[gid] === "number" && s.games.wins[gid] >= 0 && s.games.wins[gid] <= 9999) clean.games.wins[gid] = Math.round(s.games.wins[gid]);
     }
     if (s.games.earned && typeof s.games.earned === "object") {
-      for (var gek in s.games.earned) {
+      var gekKeys = capDayKeys(s.games.earned, 2000);
+      for (var gki2 = 0; gki2 < gekKeys.length; gki2++) {
+        var gek = gekKeys[gki2];
         var gev = s.games.earned[gek];
         if (/^\d{4}-\d{2}-\d{2}$/.test(gek) && typeof gev === "number" && gev > 0 && gev <= 500) clean.games.earned[gek] = Math.round(gev);
       }
@@ -8213,7 +8370,9 @@ function sanitize(s) {
   // 📸 اسنپ‌شات روزانه تا آمار روزهای گذشته با تغییر لیست کارها عوض نشود
   clean.daySnap = {};
   if (s.daySnap && typeof s.daySnap === "object") {
-    for (var dsk in s.daySnap) {
+    var dskKeys = capDayKeys(s.daySnap, 2000);
+    for (var dski = 0; dski < dskKeys.length; dski++) {
+      var dsk = dskKeys[dski];
       var dsv = s.daySnap[dsk];
       if (/^\d{4}-\d{2}-\d{2}$/.test(dsk) && dsv && typeof dsv.t === "number" && typeof dsv.d === "number" && dsv.t >= 0 && dsv.t <= 999 && dsv.d >= 0 && dsv.d <= 999) {
         var dtotal = Math.round(dsv.t);
@@ -8254,6 +8413,43 @@ var lockState = { enabled: false, locked: false, key: null, salt: null };
 var lockMode = "unlock";
 var lockFailCount = 0;
 var lockWaitUntil = 0;
+var lockWaitMs = 30000;       // جریمه با هر ۵ تلاش اشتباه دوبرابر می‌شود (تا ۱۰ دقیقه)
+var lockAfterVerify = null;   // بعد از تأیید رمز فعلی چه کاری انجام شود: "set" | "remove"
+
+function lockPenalize() {
+  lockFailCount++;
+  if (lockFailCount >= 5) {
+    lockWaitUntil = Date.now() + lockWaitMs;
+    $("lockError").textContent = "چند بار اشتباه بود — " + toFa(Math.round(lockWaitMs / 1000)) + " ثانیه صبر کن ⏳";
+    lockWaitMs = Math.min(lockWaitMs * 2, 600000);
+    lockFailCount = 0;
+  } else {
+    $("lockError").textContent = "رمز اشتباه ❌ (" + toFa(lockFailCount) + " بار)";
+  }
+}
+
+// تأیید رمز فعلی قبل از تغییر/برداشتن قفل — کسی با دسترسی لحظه‌ای نمی‌تواند رمز را عوض کند
+function verifyCurrentPin(pin) {
+  if (Date.now() < lockWaitUntil) {
+    $("lockError").textContent = "چند لحظه صبر کن… ⏳";
+    return;
+  }
+  var raw = storageGetRaw();
+  if (!raw || raw.indexOf(LOCK_PREFIX) !== 0) { lockAfterVerify = null; hideLock(); return; }
+  var parts = raw.slice(LOCK_PREFIX.length).split("|");
+  if (parts.length !== 3) { $("lockError").textContent = "حافظه خراب است 😕"; return; }
+  deriveKey(pin, b642buf(parts[0])).then(function (k) {
+    return crypto.subtle.decrypt({ name: "AES-GCM", iv: b642buf(parts[1]) }, k, b642buf(parts[2]));
+  }).then(function () {
+    lockFailCount = 0; lockWaitMs = 30000;
+    var action = lockAfterVerify; lockAfterVerify = null;
+    if (action === "set") showLock("set", "رمز جدید رو دو بار وارد کن");
+    else if (action === "remove") { doRemoveLock(); hideLock(); }
+    else hideLock();
+  }).catch(function () {
+    lockPenalize();
+  });
+}
 
 function b2b64(buf) {
   var arr = new Uint8Array(buf), s = "";
@@ -8359,14 +8555,7 @@ function attemptUnlock(pin) {
       finishUnlock();
     });
   }).catch(function () {
-    lockFailCount++;
-    if (lockFailCount >= 5) {
-      lockWaitUntil = Date.now() + 30 * 1000;
-      lockFailCount = 0;
-      $("lockError").textContent = "چند بار اشتباه بود — ۳۰ ثانیه صبر کن ⏳";
-    } else {
-      $("lockError").textContent = "رمز اشتباه ❌ (" + toFa(lockFailCount) + " بار)";
-    }
+    lockPenalize();
   });
 }
 
@@ -8421,6 +8610,11 @@ $("lockForm").addEventListener("submit", function (e) {
     enableLock(p1);
     return;
   }
+  if (lockMode === "verify") {
+    if (!p1) return;
+    verifyCurrentPin(p1);
+    return;
+  }
   if (!p1) return;
   attemptUnlock(p1);
 });
@@ -8431,20 +8625,29 @@ $("lockBtn").addEventListener("click", function () {
     return;
   }
   if (lockState.enabled) {
-    showLock("set", "رمز جدید رو دو بار وارد کن");
+    // امنیت: برای تغییر رمز اول رمز فعلی تأیید می‌شود
+    lockAfterVerify = "set";
+    showLock("verify", "برای تغییر رمز، رمز فعلی را وارد کن");
   } else {
     showLock("set", "یک رمز (۴ تا ۱۲ رقم) تعیین کن ⚠️ اگر فراموشش کنی، داده‌ها دیگر قابل برگشت نیستن!");
   }
 });
 
-$("removeLockBtn").addEventListener("click", function () {
-  if (!window.confirm("قفل رمز برداشته بشه؟ (داده‌ها می‌مانن، فقط رمز نمی‌خوان)")) return;
+function doRemoveLock() {
   lockState.enabled = false;
   lockState.key = null;
   lockState.salt = null;
   storageSet(JSON.stringify(state));
   refreshLockButtons();
   showToast("قفل برداشته شد 🔓");
+}
+
+$("removeLockBtn").addEventListener("click", function () {
+  if (lockState.locked) return;
+  if (!window.confirm("قفل رمز برداشته بشه؟ (داده‌ها می‌مانن، فقط رمز نمی‌خوان)")) return;
+  // امنیت: برای برداشتن قفل هم رمز فعلی لازم است
+  lockAfterVerify = "remove";
+  showLock("verify", "برای برداشتن قفل، رمز فعلی را وارد کن");
 });
 
 /* ==================# رویدادها #================== */
