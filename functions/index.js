@@ -105,11 +105,16 @@ exports.accountDelete = onCall({ enforceAppCheck: ENFORCE_APPCHECK, region: "us-
   const counts = { posts: 0, legacyPosts: 0, reactions: 0, reports: 0, rooms: 0, roomsLeft: 0, invites: 0, sync: 0 };
   const bump = (k, n) => { counts[k] += n || 0; };
 
+  // صفحه‌بندی با مکان‌نمای documentId: بعد از حذف/به‌روزرسانی، همان صفحه دوباره خوانده نمی‌شود
   async function eachPage(query, fn, size = 200) {
+    let last = null;
     for (;;) {
-      const qs = await query.limit(size).get();
+      let q = query.orderBy(admin.firestore.FieldPath.documentId());
+      if (last) q = q.startAfter(last);
+      const qs = await q.limit(size).get();
       if (qs.empty) return;
       for (const d of qs.docs) await fn(d);
+      last = qs.docs[qs.docs.length - 1];
       if (qs.size < size) return;
     }
   }
@@ -117,16 +122,21 @@ exports.accountDelete = onCall({ enforceAppCheck: ENFORCE_APPCHECK, region: "us-
   await progressRef.set({ status: "running", startedAt: admin.firestore.FieldValue.serverTimestamp(), uid }, { merge: true });
 
   try {
-    // واکنش‌های من روی پست دیگران (بدون Admin SDK ممکن نیست)
-    await eachPage(
-      db.collectionGroup("posts").where(`re.${uid}`, "!=", null),
-      async (d) => {
-        const patch = {};
-        patch[`re.${uid}`] = admin.firestore.FieldValue.delete();
-        await d.ref.update(patch);
-        bump("reactions");
-      }
-    );
+    // واکنش‌های من روی پست دیگران — پیمایش فید هر صاحب دوست؛ بدون نیاز به ایندکس collectionGroup
+    const fdoc = await db.collection("friendships").doc(uid).get();
+    const links = (fdoc.exists && fdoc.data().links) || {};
+    const owners = Object.keys(links).filter((k) => links[k] === true);
+    for (const owner of owners) {
+      await eachPage(db.collection("feed").doc(owner).collection("posts"), async (d) => {
+        const re = d.get("re");
+        if (re && Object.prototype.hasOwnProperty.call(re, uid)) {
+          const patch = {};
+          patch[`re.${uid}`] = admin.firestore.FieldValue.delete();
+          await d.ref.update(patch);
+          bump("reactions");
+        }
+      });
+    }
     await eachPage(db.collection("feed").doc(uid).collection("posts"), async (d) => { await d.ref.delete(); bump("posts"); });
     await eachPage(db.collection("feed").where("uid", "==", uid), async (d) => { await d.ref.delete(); bump("legacyPosts"); });
     await eachPage(db.collection("reports").where("by", "==", uid), async (d) => { await d.ref.delete(); bump("reports"); });
@@ -150,11 +160,12 @@ exports.accountDelete = onCall({ enforceAppCheck: ENFORCE_APPCHECK, region: "us-
 });
 
 // پاک‌سازی زمان‌بندی‌شده‌ی اتاق‌های منقضی و اتاق‌های قدیمی بدون exp
-// هر اجرا حداکثر ۵ دسته‌ی ۴۰۰تایی (سقف batch فایربیس ۵۰۰ عملیات است) و قابل تکرار/idempotent.
+// هر sweep تا ۵ دسته‌ی ۴۰۰تایی دارد (سقف batch فایربیس ۵۰۰ عملیات است)؛ بودجه‌ی دورها بین دو sweep مشترک نیست.
 exports.expireRooms = onSchedule({ schedule: "every 60 minutes", region: "us-central1", timeoutSeconds: 300 }, async () => {
   const now = Date.now();
-  let deleted = 0, rounds = 0;
+  let deleted = 0;
   async function sweep(query, filter) {
+    let rounds = 0;
     while (rounds < 5) {
       rounds++;
       const qs = await query.limit(400).get();
