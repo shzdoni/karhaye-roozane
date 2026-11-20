@@ -31,16 +31,38 @@ jobs:
         with:
           gradle-version: "8.7"
 
+      # امنیت: کلید امضا از Secrets خوانده می‌شود (هرگز در ریپو نیست).
+      # Secretهای لازم: KR_KEYSTORE_B64 (محتوای base64 فایل p12)، KR_KEYSTORE_PASSWORD، KR_KEY_ALIAS
+      - name: Decode signing key from secrets
+        env:
+          KR_KEYSTORE_B64: ${{ secrets.KR_KEYSTORE_B64 }}
+          KR_KEYSTORE_PASSWORD: ${{ secrets.KR_KEYSTORE_PASSWORD }}
+          KR_KEY_ALIAS: ${{ secrets.KR_KEY_ALIAS }}
+        run: |
+          if [ -n "$KR_KEYSTORE_B64" ]; then
+            echo "$KR_KEYSTORE_B64" | base64 -d > /tmp/release.p12
+            echo "KR_KEYSTORE_FILE=/tmp/release.p12" >> $GITHUB_ENV
+            echo "KR_KEYSTORE_PASSWORD=$KR_KEYSTORE_PASSWORD" >> $GITHUB_ENV
+            echo "KR_KEY_ALIAS=${KR_KEY_ALIAS:-karhaye}" >> $GITHUB_ENV
+            echo "KR_KEY_READY=1" >> $GITHUB_ENV
+          else
+            echo "KR_KEY_READY=0" >> $GITHUB_ENV
+            echo "::warning::Secret KR_KEYSTORE_B64 یافت نشد — APK بدون امضا بیلد می‌شود (نصب نخواهد شد)."
+          fi
+
       - name: Unzip project
         run: unzip -q android-project.zip -d build-src && ls build-src
 
       - name: Build release APK
+        if: env.KR_KEY_READY == '1'
         run: gradle -p build-src/android-project assembleRelease --no-daemon
 
       - name: Collect APK
+        if: env.KR_KEY_READY == '1'
         run: cp build-src/android-project/app/build/outputs/apk/release/app-release.apk karhaye-roozane.apk
 
       - name: Publish APK to release
+        if: env.KR_KEY_READY == '1'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: android-latest
@@ -49,6 +71,7 @@ jobs:
           files: karhaye-roozane.apk
 
       - name: Update APK on site
+        if: env.KR_KEY_READY == '1'
         continue-on-error: true
         run: |
           git config user.name github-actions
